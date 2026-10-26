@@ -22,8 +22,7 @@
 4. [Quickstart](#-quickstart)
 5. [How to Extend](#-how-to-extend)
 6. [Referenced Resources](#-referenced-resources)
-7. [Contributing](#-contributing)
-8. [Citation](#-citation)
+7. [Citation](#-citation)
 
 </details>
 
@@ -176,20 +175,6 @@ MAS-PromptBench builds on the agent frameworks and libraries below, which retain
 
 ---
 
-## 🤝 Contributing
-
-Contributions are very welcome — a new topology, dataset, or optimizer, a framework integration, a bug fix, or even a typo fix.
-
-A few tips for a smooth contribution:
-
-- For anything substantial, open an issue first so we can talk through the approach together.
-- Follow the existing conventions — the [How to Extend](#-how-to-extend) guides and [topologies/README.md](topologies/README.md) are great starting points.
-- Before opening a PR, run the relevant smoke demo, a small `--batch --limit` slice, and the [tests](tests/golden/README.md).
-
-Every contribution helps researchers compare multi-agent systems on a shared, reproducible benchmark. 🙌
-
----
-
 ## 📚 Citation
 
 If you use MAS-PromptBench in your research, please cite it:
@@ -202,9 +187,3 @@ If you use MAS-PromptBench in your research, please cite it:
   year={2026}
 }
 ```
-
----
-
-## ⚖️ License
-
-MAS-PromptBench is released under the [MIT License](LICENSE). The agent frameworks and the API-Bank source under `benchmarks/apibank/apibank_upstream/` retain their respective upstream licenses — comply with each when redistributing.
