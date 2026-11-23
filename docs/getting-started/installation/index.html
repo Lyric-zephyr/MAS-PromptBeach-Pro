@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="description" content="Documentation for MAS-PromptBeach-Pro, a derivative of the MAS-PromptBench benchmark.">
-  <meta property="og:title" content="Installation · MAS-PromptBeach-Pro Docs">
-  <meta property="og:description" content="Documentation for MAS-PromptBeach-Pro, a derivative of the MAS-PromptBench benchmark.">
-  <link rel="canonical" href="https://Lyric-zephyr.github.io/MAS-PromptBeach-Pro/docs/getting-started/installation/">
-  <title>Installation · MAS-PromptBeach-Pro Docs</title>
+  <meta name="description" content="Documentation for MyMasBeach, a derivative of the MAS-PromptBench benchmark.">
+  <meta property="og:title" content="Installation · MyMasBeach Docs">
+  <meta property="og:description" content="Documentation for MyMasBeach, a derivative of the MAS-PromptBench benchmark.">
+  <link rel="canonical" href="https://Lyric-zephyr.github.io/MyMasBeach/docs/getting-started/installation/">
+  <title>Installation · MyMasBeach Docs</title>
   <link rel="icon" type="image/png" href="../../assets/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,700;1,14..32,800&family=JetBrains+Mono:wght@400;500&display=swap">
-  <link rel="stylesheet" href="../../assets/docs.css?v=20261123043733">
+  <link rel="stylesheet" href="../../assets/docs.css?v=20261123074134">
   <!-- page transition to and from the project page ("Short glide, ordered") -->
-  <script src="../../assets/mpb-transition.js?v=20261123043733"></script>
-  <link rel="stylesheet" href="../../assets/mpb-transition.css?v=20261123043733">
+  <script src="../../assets/mpb-transition.js?v=20261123074134"></script>
+  <link rel="stylesheet" href="../../assets/mpb-transition.css?v=20261123074134">
   <script>
     /* Apply a stored theme before first paint. "system" stores nothing. Hosts that
        sandbox each page block storage, so the tab's
@@ -31,7 +31,7 @@
   <link rel="expect" href="#mpb-title" blocking="render">
 </head>
 <body>
-<div class="site" data-base-url="../.." data-version="20261123043733">
+<div class="site" data-base-url="../.." data-version="20261123074134">
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none">
   <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.6-3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
@@ -55,14 +55,14 @@
   <div class="topbar-inner">
     <button class="icon-btn nav-toggle" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg class="i" aria-hidden="true"><use href="#i-menu"></use></svg></button>
     <a class="brand" href="../..">
-      <span class="brand-name mpb-title" id="mpb-title">MAS-PromptBeach-Pro</span><span class="brand-docs">Docs</span>
+      <span class="brand-name mpb-title" id="mpb-title">MyMasBeach</span><span class="brand-docs">Docs</span>
     </a>
     <button class="search-trigger" type="button" aria-label="Search the docs" aria-haspopup="dialog">
       <svg class="i" aria-hidden="true"><use href="#i-search"></use></svg><span class="search-placeholder">Search the docs</span><kbd>/</kbd>
     </button>
     <a class="deepwiki-btn project-btn" href="https://juyangbai.github.io/MAS-PromptBench/" title="Upstream project page"><svg class="i" aria-hidden="true"><use href="#i-home"></use></svg><span>Upstream Project</span></a>
     <a class="deepwiki-btn" href="https://deepwiki.com/juyangbai/MAS-PromptBench" title="Ask about the upstream project on DeepWiki"><svg class="i" aria-hidden="true"><use href="#i-wiki"></use></svg><span>DeepWiki</span></a>
-    <a class="deepwiki-btn code-btn github-btn" href="https://github.com/Lyric-zephyr/MAS-PromptBeach-Pro" title="View source on GitHub"><svg class="i" aria-hidden="true"><use href="#i-github"></use></svg><span>Source</span></a>
+    <a class="deepwiki-btn code-btn github-btn" href="https://github.com/Lyric-zephyr/MyMasBeach" title="View source on GitHub"><svg class="i" aria-hidden="true"><use href="#i-github"></use></svg><span>Source</span></a>
     <button class="icon-btn theme-toggle" type="button" aria-label="Switch color theme"><svg class="i" aria-hidden="true"><use href="#i-sun"></use></svg><svg class="i" aria-hidden="true"><use href="#i-moon"></use></svg></button>
   </div>
 </header>
@@ -182,7 +182,9 @@
 <div><span>GPU</span>Optional</div>
 </div>
 <h2 id="clone-the-repository">Clone the repository<a class="headerlink" href="#clone-the-repository" title="Link to this section">#</a></h2>
-<p>On the MAS-PromptBeach-Pro repository page, use GitHub's <strong>Code</strong> button to copy the clone URL. Run <code>git clone</code> with that URL, then enter the cloned directory.</p>
+<div class="language-bash highlight"><span class="filename">Clone</span><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Lyric-zephyr/MyMasBeach.git
+<span class="nb">cd</span><span class="w"> </span>MyMasBeach
+</code></pre></div>
 <p>The agent frameworks come with the environment in the next step; nothing else needs cloning.</p>
 <h2 id="create-the-environment">Create the environment<a class="headerlink" href="#create-the-environment" title="Link to this section">#</a></h2>
 <div class="language-bash highlight"><span class="filename">Create and activate</span><pre><span></span><code>conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
@@ -191,13 +193,13 @@ conda<span class="w"> </span>activate<span class="w"> </span>mas-promptbench
 <p>The environment holds:</p>
 <ul>
 <li><strong>Python 3.11</strong> with NumPy and pandas.</li>
-<li><strong>The agent frameworks</strong>: LangGraph, CrewAI and AutoGen, each installed from the upstream commit pinned in <a href="https://github.com/juyangbai/MAS-PromptBench/blob/main/environment.yml"><code>environment.yml</code></a>, plus LangChain's OpenAI client and the OpenAI SDK (<code>openai&lt;3</code>).</li>
+<li><strong>The agent frameworks</strong>: LangGraph, CrewAI and AutoGen, each installed from the upstream commit pinned in <a href="https://github.com/Lyric-zephyr/MyMasBeach/blob/main/environment.yml"><code>environment.yml</code></a>, plus LangChain's OpenAI client and the OpenAI SDK (<code>openai&lt;3</code>).</li>
 <li><strong>Benchmark tooling</strong>: Hugging Face <code>datasets</code> for loading tasks, the <code>wikipedia</code> client used by HotpotQA retrieval, the official BFCL AST checker (<code>bfcl-eval</code>) and the SWE-bench harness (<code>swebench</code>).</li>
 <li><strong>Prompt optimization</strong>: DSPy and <code>gepa</code>, plus <code>torch</code>, <code>torch_geometric</code> and <code>sentence-transformers</code> (CPU is enough).</li>
 <li><strong>Local serving</strong>: vLLM and a CUDA 12.8 toolchain, used only if you serve models yourself.</li>
 </ul>
 <h2 id="install-the-openai-agents-sdk">Install the OpenAI Agents SDK<a class="headerlink" href="#install-the-openai-agents-sdk" title="Link to this section">#</a></h2>
-<p>The Decentralized topology has a variant on the OpenAI Agents SDK. The SDK needs <code>openai&gt;=3</code>, which conflicts with the main environment, so install it into its own folder from the pinned list in <a href="https://github.com/juyangbai/MAS-PromptBench/blob/main/requirements-openai-agents.txt"><code>requirements-openai-agents.txt</code></a>:</p>
+<p>The Decentralized topology has a variant on the OpenAI Agents SDK. The SDK needs <code>openai&gt;=3</code>, which conflicts with the main environment, so install it into its own folder from the pinned list in <a href="https://github.com/Lyric-zephyr/MyMasBeach/blob/main/requirements-openai-agents.txt"><code>requirements-openai-agents.txt</code></a>:</p>
 <div class="language-bash highlight"><span class="filename">Isolated SDK install</span><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>--target<span class="w"> </span>vendor/openai_agents<span class="w"> </span>-r<span class="w"> </span>requirements-openai-agents.txt
 </code></pre></div>
 <p>You never put this folder on the path yourself. The Agents SDK runners, and <code>python -m optimizers.protocol.run</code> for an Agents SDK cell, restart themselves with it first on <code>PYTHONPATH</code>. If the SDK is missing or unusable, an Agents SDK runner exits with status 1 before the first row and prints the reason and the fix. To use an install elsewhere, set <code>OPENAI_AGENTS_PATH</code>.</p>
@@ -232,10 +234,10 @@ conda<span class="w"> </span>activate<span class="w"> </span>mas-promptbench
     </nav>
 
     <footer class="site-foot">
-      <span>MAS-PromptBeach-Pro is based on MAS-PromptBench and distributed under the MIT License.</span>
+      <span>MyMasBeach is based on MAS-PromptBench and distributed under the MIT License.</span>
       <span class="foot-links">
         <a href="https://juyangbai.github.io/MAS-PromptBench/">Project page</a>
-        <a href="https://github.com/Lyric-zephyr/MAS-PromptBeach-Pro">Code</a>
+        <a href="https://github.com/Lyric-zephyr/MyMasBeach">Code</a>
         <a href="https://deepwiki.com/juyangbai/MAS-PromptBench">DeepWiki</a>
       </span>
     </footer>
@@ -276,7 +278,7 @@ conda<span class="w"> </span>activate<span class="w"> </span>mas-promptbench
     svg: { fontCache: "global" }
   };
 </script>
-<script src="../../assets/docs.js?v=20261123043733" defer></script>
+<script src="../../assets/docs.js?v=20261123074134" defer></script>
 </div>
 </body>
 </html>
