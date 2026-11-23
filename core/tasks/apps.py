@@ -14,6 +14,7 @@ import ast
 import json
 import os
 import subprocess
+import sys
 from collections.abc import Callable
 from pathlib import Path
 
@@ -73,11 +74,48 @@ def load_instances(
 
     ``input_output`` keeps the first ``max_tests_per_row`` tests (all of them for None or a value <= 0).
     """
-    from datasets import load_dataset
+    from core.data import load_dataset, validate_ids
+    from core.data import root as data_root
+
+    local = Path(os.environ.get("APPS_LOCAL_DATA", str(data_root() / "apps/eval_data.json")))
+    if local.is_file():
+        rows = json.loads(local.read_text(encoding="utf-8"))
+        if not isinstance(rows, list) or any(not {"id", "problem", "input_output"} <= row.keys() for row in rows):
+            raise ValueError(f"dataset_schema_invalid: {local}")
+        validate_ids(rows, only)
+        if max_tests_per_row is None or not 0 < max_tests_per_row <= MAX_TESTS_PER_ROW:
+            raise ValueError("local_test_limit_unavailable: normalized APPS cache supports at most 20 tests per row")
+        if only is not None:
+            rows = [r for r in rows if str(r["id"]) in set(only)]
+        if difficulty is not None:
+            rows = [r for r in rows if r.get("difficulty") == difficulty]
+        rows = rows[offset:]
+        if limit is not None and len(rows) < limit and only is None:
+            raise ValueError(
+                f"dataset_cache_subset_too_small: requested {limit}, available {len(rows)}; select the intended IDs"
+            )
+        rows = rows if limit is None else rows[:limit]
+        for row in rows:
+            row["id"] = str(row["id"])
+            io = row["input_output"]
+            if (
+                not isinstance(io, dict)
+                or len(io.get("inputs", [])) != len(io.get("outputs", []))
+                or not io.get("inputs")
+            ):
+                raise ValueError(f"dataset_tests_invalid: {row['id']}")
+            row["input_output"] = {
+                **io,
+                "inputs": io["inputs"][:max_tests_per_row],
+                "outputs": io["outputs"][:max_tests_per_row],
+            }
+        return rows
+    if "APPS_LOCAL_DATA" in os.environ:
+        raise FileNotFoundError(f"dataset_cache_missing: {local}")
 
     rows: list[dict] = []
     for row in load_dataset(HF_DATASET, split=HF_SPLIT, trust_remote_code=True):
-        rid = str(row.get("problem_id"))
+        rid = str(row.get("problem_id", row.get("id")))
         if only is not None and rid not in set(only):
             continue
         if difficulty is not None and row.get("difficulty") != difficulty:
@@ -221,7 +259,9 @@ def _parse_maybe_literal(value):
 
 def _run_stdin_test(code: str, stdin: str, expected: str, timeout_s: int) -> dict:
     try:
-        result = subprocess.run(["python", "-c", code], input=stdin, capture_output=True, text=True, timeout=timeout_s)
+        result = subprocess.run(
+            [sys.executable, "-c", code], input=stdin, capture_output=True, text=True, timeout=timeout_s
+        )
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "timeout", "mode": "stdin"}
     except Exception as e:

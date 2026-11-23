@@ -20,8 +20,12 @@ import wikipedia
 
 from core import batch
 
+# Identify benchmark traffic and use Wikimedia's HTTPS API.
+wikipedia.set_user_agent("MAS-PromptBench/0.1 (https://github.com/juyangbai/MAS-PromptBench; research benchmark)")
+wikipedia.wikipedia.API_URL = wikipedia.wikipedia.API_URL.replace("http://", "https://", 1)
+
 DATASET = "hotpotqa"
-HF_DATASET = "hotpot_qa"
+HF_DATASET = "hotpotqa/hotpot_qa"
 HF_CONFIG = "distractor"
 HF_SPLIT = "validation"
 SOURCE = f"HotpotQA from {HF_DATASET} [{HF_CONFIG}/{HF_SPLIT}]"
@@ -71,11 +75,11 @@ def load_instances(limit: int | None = None, offset: int = 0, only: list[str] | 
     ``id`` is the row's own HotpotQA id; ``type`` is "comparison" or "bridge"
     and ``level`` "easy", "medium" or "hard".
     """
-    from datasets import load_dataset
+    from core.data import load_dataset
 
     wanted = None if only is None else set(only)
     rows: list[dict] = []
-    for row in load_dataset(HF_DATASET, HF_CONFIG, trust_remote_code=True)[HF_SPLIT]:
+    for row in load_dataset(HF_DATASET, HF_CONFIG, split=HF_SPLIT, trust_remote_code=True):
         rid = row.get("id")
         if wanted is not None and rid not in wanted:
             continue
@@ -146,43 +150,83 @@ PAGE_PARAMETERS = {"type": "object", "properties": {"title": {"type": "string"}}
 PAGE_CHAR_BUDGET = 4000  # characters of an article a page lookup returns
 
 
-def search(query: str, top_k: int = 3) -> str:
-    """Titles and two-sentence summaries of the top ``top_k`` Wikipedia matches, or an error line."""
+WIKIPEDIA_API = "https://en.wikipedia.org/w/api.php"
+WIKIPEDIA_USER_AGENT = "MAS-PromptBench/0.1 (https://github.com/juyangbai/MAS-PromptBench; research benchmark)"
+
+
+def _wiki_request(params: dict) -> dict:
+    import requests
+
     try:
-        titles = wikipedia.search(query, results=top_k)
-    except Exception as e:
-        return f"ERROR: {e}"
-    if not titles:
-        return f"[no Wikipedia results for '{query}']"
-    chunks = []
-    for title in titles:
+        response = requests.get(
+            WIKIPEDIA_API,
+            params={"action": "query", "format": "json", **params},
+            headers={"User-Agent": WIKIPEDIA_USER_AGENT},
+            timeout=20,
+        )
+        if response.status_code != 200:
+            return {"status": "http_error", "http_status": response.status_code}
         try:
-            summary = wikipedia.summary(title, sentences=2, auto_suggest=False)
-            chunks.append(f"- {title}: {summary}")
-        except wikipedia.DisambiguationError as e:
-            chunks.append(f"- {title}: disambiguation page; options include {e.options[:3]}")
-        except wikipedia.PageError:
-            chunks.append(f"- {title}: (no page)")
-        except Exception as e:
-            chunks.append(f"- {title}: error ({e})")
-    return "\n".join(chunks)
+            payload = response.json()
+        except ValueError:
+            return {"status": "invalid_response", "http_status": response.status_code}
+        if not isinstance(payload, dict):
+            return {"status": "invalid_response", "http_status": response.status_code}
+        if "error" in payload:
+            return {"status": "api_error", "http_status": 200, "error": payload["error"]}
+        return {"status": "ok", "http_status": 200, "data": payload}
+    except requests.Timeout:
+        return {"status": "timeout", "http_status": None}
+    except requests.RequestException as exc:
+        return {"status": "network_error", "http_status": None, "error": str(exc)}
+
+
+def search(query: str, top_k: int = 3) -> str:
+    """Structured English status plus titles and short extracts, without hidden retries."""
+    import json
+
+    result = _wiki_request(
+        {
+            "generator": "search",
+            "gsrsearch": query,
+            "gsrlimit": max(1, min(10, top_k)),
+            "prop": "extracts",
+            "explaintext": 1,
+            "exintro": 1,
+            "exsentences": 2,
+        }
+    )
+    if result["status"] == "ok":
+        pages = result.pop("data").get("query", {}).get("pages", {})
+        result["results"] = [
+            {"title": p["title"], "summary": p.get("extract", "")}
+            for p in sorted(pages.values(), key=lambda p: p.get("index", 0))
+            if "missing" not in p
+        ]
+        if not result["results"]:
+            result["status"] = "no_results"
+    return json.dumps(result, ensure_ascii=False)
 
 
 def read_page(title: str, options_label: str = "options include") -> str:
-    """The article titled ``title``, cut at :data:`PAGE_CHAR_BUDGET` characters, or an error line.
+    """A bounded plaintext extract with machine-readable request status."""
+    import json
 
-    ``options_label`` introduces the candidate titles of a disambiguation page.
-    """
-    try:
-        # ``content`` is a second, lazy request: its failures are tool errors too.
-        content = wikipedia.page(title, auto_suggest=False).content
-    except wikipedia.DisambiguationError as e:
-        return f"ERROR: '{title}' is a disambiguation page; {options_label} {e.options[:5]}"
-    except wikipedia.PageError:
-        return f"ERROR: no Wikipedia page titled '{title}'"
-    except Exception as e:
-        return f"ERROR: {e}"
-    return content[:PAGE_CHAR_BUDGET] + ("..." if len(content) > PAGE_CHAR_BUDGET else "")
+    result = _wiki_request({"titles": title, "prop": "extracts|pageprops", "explaintext": 1, "redirects": 1})
+    if result["status"] == "ok":
+        pages = list(result.pop("data").get("query", {}).get("pages", {}).values())
+        pages = [p for p in pages if "missing" not in p]
+        if not pages:
+            result["status"] = "no_results"
+        else:
+            page = pages[0]
+            if "disambiguation" in page.get("pageprops", {}):
+                result["status"] = "disambiguation"
+            content = page.get("extract", "")
+            result.update(
+                title=page["title"], content=content[:PAGE_CHAR_BUDGET], truncated=len(content) > PAGE_CHAR_BUDGET
+            )
+    return json.dumps(result, ensure_ascii=False)
 
 
 def make_wikipedia_search(doc: str) -> Callable[..., str]:

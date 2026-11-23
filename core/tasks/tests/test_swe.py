@@ -99,44 +99,31 @@ def test_instance_tests_decode_json():
     assert task.instance_tests({"FAIL_TO_PASS": '["a"]', "PASS_TO_PASS": ["b"]}) == (["a"], ["b"])
 
 
-def test_singularity_report(monkeypatch, tmp_path):
-    monkeypatch.setattr(task, "ensure_sif", lambda iid: tmp_path / "x.sif")
-    monkeypatch.setenv("SWE_EVAL_LOG_DIR", str(tmp_path / "logs"))
-    outputs = {"out": "t1 PASSED\nt2 FAILED\nt3 XFAIL\n"}
+def test_singularity_report_delegates_to_repo_specific_harness(monkeypatch):
+    from core import swe_harness
 
-    def run(cmd, **kwargs):
-        if outputs["out"] is None:
-            raise subprocess.TimeoutExpired(cmd, 1)
-        return subprocess.CompletedProcess(cmd, 0, outputs["out"], "")
-
-    monkeypatch.setattr(task.subprocess, "run", run)
-    inst = {"instance_id": "a__b-1"}
-    report = task.run_tests_singularity(inst, "PATCH", ["t1", "t2"], ["t3", "t4"])
-    assert report["fail_to_pass"] == {"success": ["t1"], "failure": ["t2"]}
-    assert (report["f2p_rate"], report["p2p_rate"]) == (0.5, 0.5)
-    assert not task.is_resolved(report) and task.exact_match_score({"f2p_rate": 1.0, "p2p_rate": 1.0}) == 1.0
-    outputs["out"] = "__APPLY_FAILED__"
-    failed = task.run_tests_singularity(inst, "PATCH", [], ["t3"])
-    assert (failed["error"], failed["f2p_rate"], failed["p2p_rate"]) == ("patch apply failed", 0.0, 0.0)
-    outputs["out"] = None
-    assert task.run_tests_singularity(inst, "PATCH", ["t1"], [])["error"] == "timeout"
-    assert task.run_tests_singularity(inst, "PATCH", [], []) == task._report([], [], lambda _: True)
+    seen = []
+    monkeypatch.setattr(swe_harness, "ensure_reference", lambda inst: seen.append("reference"))
+    report = task._report(["t1", "t2"], ["t3", "t4"], lambda name: name in {"t1", "t3"})
+    monkeypatch.setattr(swe_harness, "evaluate", lambda inst, patch, **kw: seen.append(patch) or report)
+    assert task.run_tests_singularity({"instance_id": "a__b-1"}, "PATCH", ["t1", "t2"], ["t3", "t4"]) == report
+    assert seen == ["reference", "PATCH"]
+    assert not task.is_resolved(report)
 
 
 def test_eval_logs_go_to_the_batch_output_dir_unless_overridden(monkeypatch, tmp_path):
-    monkeypatch.setattr(task, "ensure_sif", lambda iid: tmp_path / "x.sif")
-    monkeypatch.setattr(task.subprocess, "run", lambda cmd, **kw: subprocess.CompletedProcess(cmd, 0, "t1 PASSED", ""))
     monkeypatch.delenv("SWE_EVAL_LOG_DIR", raising=False)
     inst = {"instance_id": "a__b-1", "repo": "a/b", "base_commit": "0123456789"}
+    seen = []
 
     def run_one(instance):
-        task.run_tests_singularity(instance, "PATCH", ["t1"], [])
+        seen.append(task.eval_log_dir())
         return task.record_head(instance)
 
     for cell in ("cell_a", "cell_b"):
         task.run_batch([inst], run_one, out_dir=tmp_path / cell, eval_mode="singularity")
-        assert (tmp_path / cell / "eval_logs" / "eval_a__b-1.log").read_text().startswith("t1 PASSED")
-    assert task.eval_log_dir() == task.RESULTS_DIR / "swe_eval_logs"  # outside a batch
+        assert seen[-1] == tmp_path / cell / "eval_logs"
+    assert task.eval_log_dir() == task.RESULTS_DIR / "swe_eval_logs"
     monkeypatch.setenv("SWE_EVAL_LOG_DIR", str(tmp_path / "logs"))
     assert task.eval_log_dir() == tmp_path / "logs"
 
@@ -251,7 +238,9 @@ def test_batch_writes_records_and_predictions(tmp_path, capsys, caplog):
     records = task.run_batch(
         [inst], run_one, out_dir=out_dir, eval_mode="singularity", omit="per_peer", predictions=copy
     )
-    assert records == [{**task.record_head(inst), "resolved": True, "per_peer": [1]}]
+    assert records == [
+        {**task.record_head(inst), "resolved": True, "per_peer": [1], "status": "completed", "error_category": None}
+    ]
     assert [json.loads(line) for line in (out_dir / "results.jsonl").read_text().splitlines()] == records
     assert copy.read_text() == (out_dir / "predictions.jsonl").read_text()
     assert (out_dir / "traces" / "a__b-1.txt").read_text() == "=== STAGE ===\ntext\n\n"

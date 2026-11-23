@@ -50,6 +50,20 @@ def test_score_prediction_replays_the_upstream_api(level1_task):
     assert task.score_prediction(level1_task, "no call")["stage"] == "parse"
 
 
+def test_bad_numeric_parameter_is_a_grading_failure(monkeypatch):
+    from types import SimpleNamespace
+
+    def call(amount):
+        raise AssertionError("invalid numeric input must be rejected before execution")
+
+    api = SimpleNamespace(call=call, input_parameters={"amount": {"type": "float"}})
+    manager = SimpleNamespace(init_tool=lambda _: api)
+    monkeypatch.setattr(task, "_manager_for_level", lambda _: manager)
+    monkeypatch.setattr(task, "_replay_prior", lambda *_: None)
+    record = task.score_prediction({"level": "1", "ground_truth": {"api_name": "Charge"}}, "[Charge(amount='abc')]")
+    assert record["error_category"] == "grading_failure" and record["failure_reason"] == "api_arguments_invalid"
+
+
 def test_votes_use_parsed_calls_and_the_earliest_tie():
     calls = ["[A(x=1)]", "[A( x = 1 )]", "", "[B(y=2)]", "[B(y=2)]"]
     agents = [{"predicted_answer": call, "answer_key": task.answer_key(call)} for call in calls]
@@ -99,7 +113,7 @@ def test_replicas_drop_role_api_fields_and_messages(level1_task):
     assert [r["seed"] for r in replicas] == [0, 1]
     assert list(replicas[0]) == [
         "seed", "solve_s", "raw", "predicted_answer", "answer_key", "answer_correct", "correct", "stage", "error",
-        "turns", "tool_calls", "telemetry",
+        "error_category", "failure_reason", "turns", "tool_calls", "telemetry",
     ]  # fmt: skip
 
 

@@ -20,13 +20,15 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, create_react_agent
+from langgraph.prebuilt import create_react_agent
 from typing_extensions import TypedDict
 
 from core import prompts, settings, teams
+from core.checkpoints import cached_call
 from core.communication import CommPolicy
 from core.llm import chat_openai
 from core.paths import RESULTS_DIR
+from core.runtime import closed_tool_history, generation_diagnostics, safe_tool_node
 from core.tasks import bfcl as task
 from core.tasks.bfcl import AST_CATEGORIES, HF_DATASET, extract_canonical, format_task, load_instances  # noqa: F401
 from core.telemetry import langchain_telemetry, normalize
@@ -83,7 +85,7 @@ DELEGATION_TOOLS = [_delegate_tool(worker) for worker in TEAM.workers]
 globals().update((t.name, t) for t in DELEGATION_TOOLS)  # each tool is also an attribute: delegate_to_<worker>
 DELEGATION_NAMES = {t.name for t in DELEGATION_TOOLS}
 MANAGER_TOOLS = DELEGATION_TOOLS  # the manager has no other tools
-_manager_tool_node = ToolNode(MANAGER_TOOLS)
+_manager_tool_node = safe_tool_node(MANAGER_TOOLS)
 
 _MANAGER_TERMINATE_NUDGE = task.TERMINATE_NUDGE + "\n\n" + TEAM.delegation_note
 
@@ -109,9 +111,12 @@ def _manager_system() -> str:
 
 def _manager_node(state: CentralizedState) -> dict:
     llm = _build_llm().bind_tools(MANAGER_TOOLS)
-    ai = llm.invoke([SystemMessage(content=_manager_system())] + state["messages"])
+    ai = llm.invoke([SystemMessage(content=_manager_system())] + closed_tool_history(state["messages"]))
     _tag_source(ai, "manager")
-    return {"messages": [ai], "turn_count": int(state.get("turn_count", 0)) + 1}
+    return {
+        "messages": [*closed_tool_history(state["messages"]), ai],
+        "turn_count": int(state.get("turn_count", 0)) + 1,
+    }
 
 
 def _route_from_manager(state: CentralizedState) -> str:
@@ -157,9 +162,9 @@ def _make_worker_node(name: str, tools: list, llm: ChatOpenAI):
     agent = create_react_agent(model=llm, tools=tools, prompt=_load_prompt(name))
 
     def node(state: CentralizedState) -> dict:
-        prior = list(state["messages"])
+        prior = closed_tool_history(list(state["messages"]))
         result = agent.invoke({"messages": prior}, config={"recursion_limit": TEAM.recursion_limit})
-        new_msgs = result["messages"][len(prior) :]
+        new_msgs = closed_tool_history(result["messages"][len(prior) :])
         for m in new_msgs:
             if isinstance(m, AIMessage):
                 _tag_source(m, name)
@@ -207,7 +212,11 @@ def _communications_source(m: BaseMessage) -> str:
 
 def _communications_to_record(m: BaseMessage) -> dict:
     content = getattr(m, "content", "") or ""
-    return {"source": _communications_source(m), "content": content if isinstance(content, str) else str(content)}
+    return {
+        "source": _communications_source(m),
+        "content": content if isinstance(content, str) else str(content),
+        "message": m.model_dump(mode="json"),
+    }
 
 
 def _fallback_output(rendered: list[dict]) -> list[dict] | None:
@@ -249,6 +258,7 @@ def solve(instance: dict) -> dict:
         "raw": final,
         "messages": rendered,
         "telemetry": normalize(langchain_telemetry(msgs)),
+        "diagnostics": generation_diagnostics(msgs, turn_limit_reached=int(result.get("turn_count", 0)) >= MAX_TURNS),
     }
 
 
@@ -257,7 +267,7 @@ def run_one(instance: dict, ground_truth: dict, category: str, out_dir: Path) ->
     summary: dict = {"id": instance["id"], "category": category}
     t0 = time.time()
     try:
-        out = solve(instance)
+        out = cached_call(lambda: solve(instance))
     except Exception as e:
         task.solve_failed(summary, e)
         summary["solve_s"] = round(time.time() - t0, 1)
@@ -267,6 +277,7 @@ def run_one(instance: dict, ground_truth: dict, category: str, out_dir: Path) ->
     summary["n_messages"] = len(out.get("messages") or [])
     summary["tool_calls"] = len(summary["model_output"])
     summary.update(out.get("telemetry") or {})
+    summary["diagnostics"] = out.get("diagnostics")
     task.write_trace(out_dir, instance["id"], task.messages_trace(out.get("messages") or []))
     return task.add_verdict(summary, score_one, instance, ground_truth, category)
 

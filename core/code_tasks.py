@@ -12,6 +12,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import tempfile
 from collections.abc import Callable
 from functools import partial
@@ -102,7 +103,9 @@ def execute_python(code: str, stdin: str = "", timeout_s: int = EXEC_TIMEOUT_S, 
         return text[:char_budget] + "\n...<truncated tool output>..."
 
     try:
-        result = subprocess.run(["python", "-c", code], input=stdin, capture_output=True, text=True, timeout=timeout_s)
+        result = subprocess.run(
+            [sys.executable, "-c", code], input=stdin, capture_output=True, text=True, timeout=timeout_s
+        )
         return f"stdout:\n{clip(result.stdout)}\nstderr:\n{clip(result.stderr)}\nexit_code: {result.returncode}"
     except subprocess.TimeoutExpired:
         return f"ERROR: code exceeded {timeout_s}s timeout"
@@ -122,8 +125,8 @@ def make_python_exec(doc: str, *, default_timeout_s: int = EXEC_TIMEOUT_S, char_
 
 # Guarded call: a submission's function called in a fresh subprocess under the
 # reference harnesses' reliability_guard and memory limits.
-# argv: [1]=max_memory_bytes (0: unlimited), [2]=fn_name, [3]=args_json, [4]=outfile;
-# stdin: the submission source.
+# argv: [1]=max_memory_bytes (0: unlimited), [2]=fn_name, [3]=outfile;
+# stdin: a JSON envelope containing the unchanged submission source and args.
 GUARDED_CALL_WORKER = """
 import os, sys, json, platform, resource, shutil, subprocess, builtins, faulthandler
 
@@ -158,15 +161,17 @@ def _reliability_guard(max_memory_bytes):
 
 _max_mem = int(sys.argv[1])
 _fn = sys.argv[2]
-_args = json.loads(sys.argv[3])
-_outfile = sys.argv[4]
-_code = sys.stdin.read()
+_outfile = sys.argv[3]
+_input = json.load(sys.stdin)
+_args = _input["args"]
+_code = _input["code"]
 
 _reliability_guard(_max_mem)
 
 _out = None
 try:
-    _ns = {}
+    import typing
+    _ns = {name: getattr(typing, name) for name in typing.__all__}
     exec(_code, _ns)
     if "Solution" in _ns:
         _target = getattr(_ns["Solution"](), _fn)
@@ -195,9 +200,11 @@ def guarded_call(code: str, fn_name: str, args: list, timeout_s: int, memory_byt
     """
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as f:
         outfile = f.name
-    command = ["python", "-c", GUARDED_CALL_WORKER, str(memory_bytes), fn_name, json.dumps(args), outfile]
+    command = [sys.executable, "-c", GUARDED_CALL_WORKER, str(memory_bytes), fn_name, outfile]
     try:
-        proc = subprocess.run(command, input=code, capture_output=True, text=True, timeout=timeout_s)
+        proc = subprocess.run(
+            command, input=json.dumps({"code": code, "args": args}), capture_output=True, text=True, timeout=timeout_s
+        )
     except subprocess.TimeoutExpired:
         os.unlink(outfile)
         return {"ok": False, "error": "timeout"}

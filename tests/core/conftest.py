@@ -1,6 +1,12 @@
 import pytest
 
 RUNNER_ENV = (
+    "MAS_MODEL_PROFILE",
+    "MODEL_PROVIDER",
+    "ENABLE_THINKING",
+    "TOKEN_LIMIT_FIELD",
+    "MODEL_EXTRA_BODY",
+    "MODEL_OMIT_PARAMS",
     "VLLM_BASE_URL",
     "MODEL_ID",
     "OPENAI_API_KEY",

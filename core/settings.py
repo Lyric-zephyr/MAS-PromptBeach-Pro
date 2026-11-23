@@ -30,6 +30,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from core.profiles import value
+
 DEFAULT_BASE_URL = "http://localhost:8000/v1"
 DEFAULT_MODEL_ID = "Qwen/Qwen3.5-9B"
 DEFAULT_API_KEY = "EMPTY"
@@ -40,11 +42,11 @@ ENABLE_THINKING = False
 
 
 def base_url() -> str:
-    return os.environ.get("VLLM_BASE_URL", DEFAULT_BASE_URL)
+    return value("VLLM_BASE_URL", DEFAULT_BASE_URL)
 
 
 def model_id() -> str:
-    return os.environ.get("MODEL_ID", DEFAULT_MODEL_ID)
+    return value("MODEL_ID", DEFAULT_MODEL_ID)
 
 
 def api_key(*, blank_as_unset: bool = False) -> str:
@@ -56,30 +58,40 @@ def api_key(*, blank_as_unset: bool = False) -> str:
 
 
 def temperature() -> float:
-    return float(os.environ.get("TASK_MODEL_TEMPERATURE", "0.0"))
+    return float(value("TASK_MODEL_TEMPERATURE", "0.0"))
 
 
 def top_p() -> float:
-    return float(os.environ.get("TASK_MODEL_TOP_P", "0.9"))
+    return float(value("TASK_MODEL_TOP_P", "0.9"))
 
 
 def max_tokens() -> int:
-    return int(os.environ.get("TASK_MODEL_MAX_TOKENS", "32768"))
+    cap = int(value("TASK_MODEL_MAX_TOKENS", "32768"))
+    if cap <= 0:
+        raise ValueError("TASK_MODEL_MAX_TOKENS must be positive")
+    return cap
 
 
 def request_seed() -> int:
-    return int(os.environ.get("REQUEST_SEED", "0"))
+    return int(value("REQUEST_SEED", "0"))
 
 
-def extra_body() -> dict[str, Any]:
-    """vLLM ``extra_body`` (a fresh dict per call)."""
-    return {
-        "repetition_penalty": REPETITION_PENALTY,
-        "chat_template_kwargs": {"enable_thinking": ENABLE_THINKING},
-    }
+def enable_thinking() -> bool:
+    raw = value("ENABLE_THINKING", str(ENABLE_THINKING)).lower()
+    if raw not in {"true", "false", "1", "0"}:
+        raise ValueError("ENABLE_THINKING must be true or false")
+    return raw in {"true", "1"}
 
 
-def decoding(*, seed: int | None = None, include_max_tokens: bool = True) -> dict[str, Any]:
+def extra_body(*, endpoint: str | None = None, model: str | None = None) -> dict[str, Any]:
+    from core.providers import body
+
+    return body(endpoint or base_url(), model or model_id(), enable_thinking(), REPETITION_PENALTY)
+
+
+def decoding(
+    *, seed: int | None = None, include_max_tokens: bool = True, endpoint: str | None = None, model: str | None = None
+) -> dict[str, Any]:
     """Decoding kwargs the runners pass to their chat clients.
 
     ``seed`` defaults to ``REQUEST_SEED`` (independent replicas pass their
@@ -92,7 +104,10 @@ def decoding(*, seed: int | None = None, include_max_tokens: bool = True) -> dic
     }
     if include_max_tokens:
         kwargs["max_tokens"] = max_tokens()
-    kwargs["extra_body"] = extra_body()
+    kwargs["extra_body"] = extra_body(endpoint=endpoint, model=model)
+    from core.providers import adapt_payload
+
+    kwargs = adapt_payload(kwargs, endpoint or base_url(), model or model_id())
     return kwargs
 
 

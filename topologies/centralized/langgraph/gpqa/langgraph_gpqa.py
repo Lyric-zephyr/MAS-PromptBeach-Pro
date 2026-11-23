@@ -17,7 +17,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, create_react_agent
+from langgraph.prebuilt import create_react_agent
 from typing_extensions import TypedDict
 
 from core import cli, prompts, settings, teams
@@ -25,6 +25,7 @@ from core.batch import attempt
 from core.calculator import CALCULATOR_DOC_NARROW, make_calculator
 from core.llm import chat_openai
 from core.paths import RESULTS_DIR
+from core.runtime import closed_tool_history, generation_diagnostics, safe_tool_node
 from core.tasks import gpqa as task
 from core.tasks.gpqa import extract_answer, load_instances
 from core.telemetry import langchain_telemetry, normalize
@@ -62,7 +63,7 @@ DELEGATION_TOOLS = [_delegate_tool(worker) for worker in TEAM.workers]
 globals().update((t.name, t) for t in DELEGATION_TOOLS)  # each tool is also an attribute: delegate_to_<worker>
 DELEGATION_NAMES = {t.name for t in DELEGATION_TOOLS}
 MANAGER_TOOLS = [TOOLS[name] for name in TEAM.manager_tools] + DELEGATION_TOOLS
-_manager_tool_node = ToolNode(MANAGER_TOOLS)
+_manager_tool_node = safe_tool_node(MANAGER_TOOLS)
 
 _MANAGER_TERMINATE_NUDGE = task.TERMINATE_NUDGE + "\n\n" + TEAM.delegation_note
 
@@ -96,9 +97,12 @@ def _manager_system() -> str:
 
 def _manager_node(state: CentralizedState) -> dict:
     llm = _build_llm().bind_tools(MANAGER_TOOLS)
-    ai = llm.invoke([SystemMessage(content=_manager_system())] + state["messages"])
+    ai = llm.invoke([SystemMessage(content=_manager_system())] + closed_tool_history(state["messages"]))
     _tag_source(ai, "manager")
-    return {"messages": [ai], "turn_count": int(state.get("turn_count", 0)) + 1}
+    return {
+        "messages": [*closed_tool_history(state["messages"]), ai],
+        "turn_count": int(state.get("turn_count", 0)) + 1,
+    }
 
 
 def _route_from_manager(state: CentralizedState) -> str:
@@ -133,9 +137,9 @@ def _make_worker_node(name: str, tools: list, llm: ChatOpenAI):
     agent = create_react_agent(model=llm, tools=tools, prompt=_load_prompt(name))
 
     def node(state: CentralizedState) -> dict:
-        prior = list(state["messages"])
+        prior = closed_tool_history(list(state["messages"]))
         result = agent.invoke({"messages": prior}, config={"recursion_limit": TEAM.recursion_limit})
-        new_msgs = result["messages"][len(prior) :]
+        new_msgs = closed_tool_history(result["messages"][len(prior) :])
         for m in new_msgs:
             if isinstance(m, AIMessage):
                 _tag_source(m, name)
@@ -177,7 +181,11 @@ def _communications_source(m: BaseMessage) -> str:
 
 def _communications_to_record(m: BaseMessage) -> dict:
     content = getattr(m, "content", "") or ""
-    return {"source": _communications_source(m), "content": content if isinstance(content, str) else str(content)}
+    return {
+        "source": _communications_source(m),
+        "content": content if isinstance(content, str) else str(content),
+        "message": m.model_dump(mode="json"),
+    }
 
 
 def _last_answer(records: list[dict]) -> str | None:
@@ -213,6 +221,7 @@ def solve(question: str, choices: list[str]) -> dict:
         "raw": final,
         "messages": rendered,
         "telemetry": normalize(langchain_telemetry(msgs)),
+        "diagnostics": generation_diagnostics(msgs, turn_limit_reached=int(result.get("turn_count", 0)) >= MAX_TURNS),
     }
 
 
@@ -228,6 +237,7 @@ def run_batch(instances: list[dict], out_path: Path | None = None, verbose: bool
             n_messages=len(out.get("messages") or []),
             latency_s=round(latency_s, 2),
             **(out.get("telemetry") or {}),
+            diagnostics=out.get("diagnostics"),
             error=error,
         )
 

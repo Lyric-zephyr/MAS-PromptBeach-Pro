@@ -1090,6 +1090,8 @@ def score_prediction(task: dict, model_output: str | None) -> dict:
         return {
             "correct": False,
             "stage": "parse",
+            "error_category": "grading_failure",
+            "failure_reason": "api_call_parse_failed",
             "error": f"{type(exc).__name__}: {exc}",
             "predicted_api_name": None,
             "predicted_params": {},
@@ -1101,6 +1103,8 @@ def score_prediction(task: dict, model_output: str | None) -> dict:
         return {
             "correct": False,
             "stage": "api_name",
+            "error_category": "grading_failure",
+            "failure_reason": "api_name_mismatch",
             "error": f"API name mismatch: {api_name} != {ground['api_name']}",
             "predicted_api_name": api_name,
             "predicted_params": params,
@@ -1110,11 +1114,46 @@ def score_prediction(task: dict, model_output: str | None) -> dict:
     if ground["api_name"] == "ToolSearcher":
         return _score_toolsearcher(params, ground, task.get("level"))
 
-    manager = _manager_for_level(level_key)
     try:
+        manager = _manager_for_level(level_key)
         _replay_prior(manager, task)
-        result = manager.api_call(api_name, **params)
         api = manager.init_tool(api_name)
+    except Exception as exc:
+        return {
+            "correct": False,
+            "stage": "setup",
+            "error_category": "execution_error",
+            "failure_reason": "api_environment_failed",
+            "error": f"{type(exc).__name__}: {exc}",
+            "predicted_api_name": api_name,
+            "predicted_params": params,
+            "execution_result": None,
+        }
+    try:
+        import inspect
+
+        inspect.signature(api.call).bind(**params)
+        declared = getattr(api, "input_parameters", None)
+        if declared is not None:
+            for key, value in params.items():
+                if key not in declared:
+                    raise TypeError(f"invalid parameter name: {key}")
+                kind = declared[key].get("type")
+                if kind in {"int", "float"}:
+                    (int if kind == "int" else float)(value)
+    except (TypeError, ValueError) as exc:
+        return {
+            "correct": False,
+            "stage": "arguments",
+            "error_category": "grading_failure",
+            "failure_reason": "api_arguments_invalid",
+            "error": str(exc),
+            "predicted_api_name": api_name,
+            "predicted_params": params,
+            "execution_result": None,
+        }
+    try:
+        result = manager.api_call(api_name, **params)
         # Some official API-Bank checkers mutate their input dictionaries
         # while comparing fuzzy fields. Keep scoring side-effect free because
         # team-size variants score several replicas against the same task.
@@ -1128,6 +1167,8 @@ def score_prediction(task: dict, model_output: str | None) -> dict:
         return {
             "correct": False,
             "stage": "score",
+            "error_category": "execution_error",
+            "failure_reason": "scoring_failed",
             "error": f"{type(exc).__name__}: {exc}",
             "predicted_api_name": api_name,
             "predicted_params": params,
@@ -1136,6 +1177,8 @@ def score_prediction(task: dict, model_output: str | None) -> dict:
     return {
         "correct": correct,
         "stage": "score",
+        "error_category": None if correct else "grading_failure",
+        "failure_reason": None if correct else "api_result_mismatch",
         "error": None if correct else "API result mismatch",
         "predicted_api_name": api_name,
         "predicted_params": params,
@@ -1472,7 +1515,21 @@ def complete(llm: Any, system: str, user: str, *, model: str, seed: int | None =
     messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
     telemetry = normalize(None)
     start = time.time()
-    response = llm.chat.completions.create(messages=messages, **completion_kwargs(seed, model=model))
+    from core.checkpoints import cached_call, digest
+
+    kwargs = completion_kwargs(seed, model=model, base_url=str(getattr(llm, "base_url", "")) or None)
+
+    def request():
+        response = llm.chat.completions.create(messages=messages, **kwargs)
+        return response.model_dump() if hasattr(response, "model_dump") else response
+
+    saved = cached_call(request, stage="completion-" + digest([messages, kwargs]))
+    if isinstance(saved, dict):
+        from openai.types.chat import ChatCompletion
+
+        response = ChatCompletion.model_validate(saved)
+    else:
+        response = saved
     openai_sdk_accumulate(telemetry, response)
     content = response.choices[0].message.content or ""
     messages.append({"role": "assistant", "content": content})
@@ -1501,6 +1558,8 @@ def scored_call(task: dict, raw: str) -> dict:
         "correct": bool(scored.get("correct")),
         "stage": scored.get("stage"),
         "error": scored.get("error"),
+        "error_category": scored.get("error_category") or (None if scored.get("correct") else "grading_failure"),
+        "failure_reason": scored.get("failure_reason"),
         "predicted_api_name": scored.get("predicted_api_name"),
         "predicted_params": scored.get("predicted_params"),
     }
@@ -1541,6 +1600,8 @@ def answer_fields(agent: dict) -> dict:
         "correct": bool(agent.get("correct")),
         "stage": agent.get("stage"),
         "error": agent.get("error"),
+        "error_category": agent.get("error_category"),
+        "failure_reason": agent.get("failure_reason"),
     }
 
 
@@ -1601,7 +1662,9 @@ def run_instance(instance: dict, out_dir: Path, *, style: str, solve: Callable[[
         "style": style,
     }
     try:
-        out = solve()
+        from core.checkpoints import cached_call
+
+        out = cached_call(solve)
     except Exception as exc:
         summary["error"] = f"{type(exc).__name__}: {exc}"
         summary["stage"] = "solve"
@@ -1615,6 +1678,8 @@ def run_instance(instance: dict, out_dir: Path, *, style: str, solve: Callable[[
     summary["correct"] = bool(out.get("correct"))
     summary["stage"] = out.get("stage")
     summary["error"] = out.get("error")
+    summary["error_category"] = out.get("error_category")
+    summary["failure_reason"] = out.get("failure_reason")
     summary["turns"] = int(out.get("turns") or 0)
     summary["tool_calls"] = int(out.get("tool_calls") or 0)
     for key in agent_runs.OUTPUT_KEYS:

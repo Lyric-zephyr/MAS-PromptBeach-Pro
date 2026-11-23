@@ -3,9 +3,9 @@ requires = ["setuptools>=64", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "mas-promptbench"
+name = "MAS-PromptBeach-Pro"
 version = "0.1.0"
-description = "A benchmark of prompt optimization for multi-agent LLM systems."
+description = "A MAS-PromptBench derivative with resumable runs, reusable model settings, and evaluation fixes."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

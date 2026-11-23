@@ -23,7 +23,7 @@ def test_openai_safe_messages_rebuilds_ai_messages():
     assert safe[0] is human
     assert safe[1].content == "x" and safe[1].additional_kwargs == {"source": "coder"}
     assert safe[1].tool_calls == [{"name": "f", "args": {"p": "a"}, "id": "call_0", "type": "tool_call"}]
-    assert safe[1].response_metadata == {}
+    assert safe[1].response_metadata == raw.response_metadata
     assert safe[2].content == "['part']" and safe[2].additional_kwargs == {}
 
 

@@ -8,14 +8,14 @@ hide:
 
 <span class="eyebrow">Tutorial and reference</span>
 
-# MAS-PromptBench Docs { .brand-title .mpb-hero }
+# MAS-PromptBeach-Pro Docs { .brand-title .mpb-hero }
 
-When does prompt optimization improve a multi-agent LLM system? These docs show you how to run the benchmark, optimize its system prompts with eight optimizers under one run protocol, and measure the gain they produce.
+MAS-PromptBeach-Pro builds on MAS-PromptBench with resumable runs, reusable model settings, and evaluation fixes. These docs describe how to run the benchmark and its eight prompt optimizers. [Original project](https://github.com/juyangbai/MAS-PromptBench)
 { .hero-lede }
 
 <div class="hero-actions" markdown>
 [Get started](getting-started/installation.md){ .btn .btn-primary }
-[Ask DeepWiki](https://deepwiki.com/juyangbai/MAS-PromptBench){ .btn .btn-deepwiki }
+[Upstream DeepWiki](https://deepwiki.com/juyangbai/MAS-PromptBench){ .btn .btn-deepwiki }
 </div>
 
 <div class="hero-meta">

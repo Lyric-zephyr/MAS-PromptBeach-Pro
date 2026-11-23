@@ -12,12 +12,7 @@ Create one conda environment for the benchmark, then install the OpenAI Agents S
 
 ## Clone the repository
 
-The code is on [GitHub](https://github.com/juyangbai/MAS-PromptBench).
-
-```bash title="Clone"
-git clone https://github.com/juyangbai/MAS-PromptBench.git
-cd MAS-PromptBench
-```
+On the MAS-PromptBeach-Pro repository page, use GitHub's **Code** button to copy the clone URL. Run `git clone` with that URL, then enter the cloned directory.
 
 The agent frameworks come with the environment in the next step; nothing else needs cloning.
 

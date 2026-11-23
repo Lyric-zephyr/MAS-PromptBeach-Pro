@@ -57,7 +57,7 @@ def load_instances(
     ``only`` selects ids before ``offset`` and ``limit`` apply; a row without a
     possible answer raises.
     """
-    from huggingface_hub import hf_hub_download
+    from core.data import hub_file as hf_hub_download
 
     def jsonl(filename: str) -> list[dict]:
         path = Path(hf_hub_download(HF_DATASET, filename, repo_type="dataset"))

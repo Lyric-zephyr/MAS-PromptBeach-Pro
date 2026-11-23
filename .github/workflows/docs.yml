@@ -1,5 +1,5 @@
-# Build the MkDocs tutorial from main and publish it to the `webpage` branch under docs/,
-# so it is served at https://juyangbai.github.io/MAS-PromptBench/docs/ next to the project page.
+# Build the MkDocs tutorial from main and publish it to the current repository's
+# `webpage` branch under docs/.
 name: docs
 
 on:
@@ -31,6 +31,9 @@ jobs:
         run: pip install -r docs/requirements.txt
 
       - name: Build (fails on broken links or anchors)
+        env:
+          MPB_DOCS_URL: ${{ vars.MPB_DOCS_URL || format('https://{0}.github.io/{1}/docs/', github.repository_owner, github.event.repository.name) }}
+          MPB_CODE_URL: ${{ github.server_url }}/${{ github.repository }}
         run: mkdocs build --strict -f docs/mkdocs.yml --site-dir "$GITHUB_WORKSPACE/_site"
 
       - name: Publish to webpage:/docs

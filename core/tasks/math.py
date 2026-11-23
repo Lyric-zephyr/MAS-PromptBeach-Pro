@@ -58,10 +58,10 @@ def load_instances(limit: int | None = None, offset: int = 0, only: list[str] | 
     ``id`` is ``math_`` plus the first 10 hex digits of the MD5 of the problem
     text, so ids are stable across runners.
     """
-    from datasets import load_dataset
+    from core.data import load_dataset
 
     rows: list[dict] = []
-    for row in load_dataset(HF_DATASET)[HF_SPLIT]:
+    for row in load_dataset(HF_DATASET, split=HF_SPLIT):
         if row.get("type") != SUBJECT or row.get("level") != LEVEL:
             continue
         problem = (row.get("problem") or "").strip()

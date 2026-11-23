@@ -45,7 +45,7 @@ FINAL_ANSWER_ROLES = {"solver", "verifier", "manager", "debater"}
 
 # Data
 def _dataset_path() -> Path:
-    from huggingface_hub import hf_hub_download
+    from core.data import hub_file as hf_hub_download
 
     return Path(
         hf_hub_download(
@@ -659,9 +659,9 @@ def _force_final_answer(llm: Any, messages: list[dict], telemetry: dict, seed: i
             ),
         }
     )
-    kwargs = completion_kwargs(seed, model=model)
-    kwargs["temperature"] = 0.0
-    kwargs["max_tokens"] = int(os.environ.get("TASK_MODEL_MAX_TOKENS", "32768"))
+    kwargs = completion_kwargs(seed, model=model, base_url=str(getattr(llm, "base_url", "")) or None)
+    if "temperature" in kwargs:
+        kwargs["temperature"] = 0.0
     try:
         response = llm.chat.completions.create(
             messages=[
@@ -709,7 +709,7 @@ def tool_loop(
             messages=messages,
             tools=tools,
             tool_choice="auto",
-            **completion_kwargs(seed, model=model),
+            **completion_kwargs(seed, model=model, base_url=str(getattr(llm, "base_url", "")) or None),
         )
         openai_sdk_accumulate(telemetry, response)
         message = response.choices[0].message

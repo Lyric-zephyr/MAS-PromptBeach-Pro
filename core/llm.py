@@ -84,7 +84,7 @@ def chat_openai_kwargs(
 ) -> dict[str, Any]:
     """Keyword arguments of a runner's LangChain ``ChatOpenAI``."""
     model, base_url = _endpoint(model, base_url)
-    decoding = settings.decoding(seed=seed, include_max_tokens=include_max_tokens)
+    decoding = settings.decoding(seed=seed, include_max_tokens=include_max_tokens, endpoint=base_url, model=model)
     body = decoding.pop("extra_body")
     kwargs: dict[str, Any] = {"model": model, "base_url": base_url, "api_key": settings.api_key(), **decoding}
     if timeout is not None:
@@ -115,7 +115,15 @@ def chat_openai(
         timeout=timeout,
         max_retries=max_retries,
     )
-    return ChatOpenAI(**kwargs)
+    # Keep the compatibility fix on our client, leaving third-party/global clients alone.
+    from core.providers import adapt_payload
+
+    class EndpointChatOpenAI(ChatOpenAI):
+        def _get_request_payload(self, *args, **options):
+            payload = super()._get_request_payload(*args, **options)
+            return adapt_payload(payload, str(self.openai_api_base or settings.base_url()), self.model_name)
+
+    return EndpointChatOpenAI(**kwargs)
 
 
 def crewai_llm_kwargs(
@@ -128,7 +136,7 @@ def crewai_llm_kwargs(
     """Keyword arguments of a runner's CrewAI ``LLM`` (``model`` without the
     ``openai/`` provider prefix, which is added here)."""
     model, base_url = _endpoint(model, base_url)
-    decoding = settings.decoding(seed=seed)
+    decoding = settings.decoding(seed=seed, endpoint=base_url, model=model)
     body = decoding.pop("extra_body")
     kwargs: dict[str, Any] = {
         "model": f"openai/{model}",
@@ -169,7 +177,7 @@ def autogen_client_kwargs(
         "base_url": base_url,
         "api_key": settings.api_key(),
         "model_info": dict(AUTOGEN_MODEL_INFO),
-        **settings.decoding(seed=seed),
+        **settings.decoding(seed=seed, endpoint=base_url, model=model),
     }
 
 
@@ -202,13 +210,11 @@ def openai_client(*, base_url: str | None = None, timeout: float = 600.0, max_re
     return OpenAI(**openai_client_kwargs(base_url=base_url, timeout=timeout, max_retries=max_retries))
 
 
-def completion_kwargs(seed: int | None = None, *, model: str | None = None) -> dict[str, Any]:
+def completion_kwargs(
+    seed: int | None = None, *, model: str | None = None, base_url: str | None = None
+) -> dict[str, Any]:
     """Per-request kwargs for ``client.chat.completions.create`` (raw clients)."""
     return {
         "model": settings.model_id() if model is None else model,
-        "temperature": settings.temperature(),
-        "top_p": settings.top_p(),
-        "seed": 0 if seed is None else int(seed),
-        "max_tokens": settings.max_tokens(),
-        "extra_body": settings.extra_body(),
+        **settings.decoding(seed=0 if seed is None else int(seed), endpoint=base_url, model=model),
     }

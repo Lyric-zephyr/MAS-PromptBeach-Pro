@@ -1,4 +1,4 @@
-# Docs site
+# MAS-PromptBeach-Pro documentation
 
 Everything for the documentation site lives in this folder:
 
@@ -23,14 +23,14 @@ mkdocs serve -f docs/mkdocs.yml            # http://127.0.0.1:8000, reloads on s
 mkdocs build --strict -f docs/mkdocs.yml   # fails on broken links or anchors, same as CI
 ```
 
-The workflow publishes the site to `https://juyangbai.github.io/MAS-PromptBench/docs/`.
-It replaces only the `docs/` folder on the `webpage` branch, so `index.html` and `quickstart.html`
-stay as they are.
+The workflow publishes the built `docs/` folder to the current repository's `webpage` branch.
+It sets the GitHub source link and canonical docs URL from the current repository. Set the
+`MPB_DOCS_URL` repository variable to use a custom docs URL. The project and DeepWiki links
+refer to the original MAS-PromptBench project.
 
 ## DeepWiki
 
-1. Open https://deepwiki.com, submit `https://github.com/juyangbai/MAS-PromptBench` and wait for the first build.
-2. The badge at the top of the repository `README.md` links to the wiki and keeps it refreshed.
+The documentation links to the [upstream DeepWiki](https://deepwiki.com/juyangbai/MAS-PromptBench).
 
 ## Editing
 

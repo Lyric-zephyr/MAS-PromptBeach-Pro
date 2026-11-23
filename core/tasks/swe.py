@@ -22,7 +22,6 @@ import tempfile
 import time
 from collections.abc import Callable
 from contextvars import ContextVar, Token
-from functools import partial
 from pathlib import Path
 
 from core import batch, cli, swe_sandbox, voting
@@ -56,9 +55,13 @@ def load_instances(
     only: list[str] | None = None,
 ) -> list[dict]:
     """Rows of SWE-bench Verified (``subset`` split), filtered to ``only``, then ``offset`` / ``limit``."""
-    from datasets import load_dataset
+    from core.data import load_dataset
 
-    rows = list(load_dataset(HF_DATASET, split=subset))
+    rows: list[dict] = []
+    for row in load_dataset(HF_DATASET, split=subset):
+        if not isinstance(row, dict):
+            raise TypeError(f"SWE-bench split {subset!r} must contain dictionaries, got {type(row).__name__}")
+        rows.append(row)
     if only:
         wanted = set(only)
         rows = [r for r in rows if r["instance_id"] in wanted]
@@ -120,6 +123,24 @@ def cli_main(
     preflight: Callable[[], None] | None = None,
 ) -> int:
     """A runner's command line (:func:`core.cli.main`); the predictions default to ``default_out_dir``."""
+
+    def arguments(parser):
+        add_arguments(parser, eval_modes=eval_modes, skip_eval=skip_eval)
+        import inspect
+
+        try:
+            supports_workers = "workers" in inspect.signature(run_batch).parameters
+        except (ValueError, TypeError):
+            supports_workers = False
+        if supports_workers:
+            parser.add_argument(
+                "--workers",
+                type=int,
+                choices=(1, 2),
+                default=1,
+                help="independent evaluation processes (WSL/Linux; default 1)",
+            )
+
     return cli.main(
         argv,
         description=description,
@@ -127,7 +148,7 @@ def cli_main(
         run_batch=run_batch,
         source=SOURCE,
         predictions=default_out_dir / "predictions.jsonl",
-        add_arguments=partial(add_arguments, eval_modes=eval_modes, skip_eval=skip_eval),
+        add_arguments=arguments,
         default_limit=DEFAULT_LIMIT,
         epilog=EPILOG,
         preflight=preflight,
@@ -540,28 +561,61 @@ def compute_patch(repo_dir: Path) -> str:
 
 
 def clone_and_checkout(repo: str, base_commit: str, workdir: Path) -> str:
-    """Clone https://github.com/{repo} into ``workdir`` (replacing it) detached at ``base_commit``; "" or the error."""
-    url = f"https://github.com/{repo}.git"
-    workdir.parent.mkdir(parents=True, exist_ok=True)
-    if workdir.exists():
-        shutil.rmtree(workdir)
-    r = subprocess.run(
-        ["git", "clone", "--quiet", "--no-tags", url, str(workdir)], capture_output=True, text=True, timeout=900
-    )
-    if r.returncode != 0:
-        return f"clone failed: {r.stderr.strip()}"
-    r = subprocess.run(
-        ["git", "-C", str(workdir), "checkout", "--quiet", "--detach", base_commit],
-        capture_output=True,
-        text=True,
-        timeout=60,
-    )
-    if r.returncode != 0:
-        return f"checkout failed: {r.stderr.strip()}"
-    subprocess.run(
-        ["git", "-C", str(workdir), "config", "advice.detachedHead", "false"], capture_output=True, text=True
-    )
-    return ""
+    """Clone cached Git objects into a fresh workdir at base_commit; download only on a cache miss."""
+    try:
+        seed = repository_seed(repo, base_commit, workdir.name, existing=workdir)
+        return local_clone(seed, workdir, base_commit)
+    except Exception as exc:
+        return f"repository_prepare_failed: {type(exc).__name__}: {exc}"
+
+
+def repository_seed(repo: str, base_commit: str, instance_id: str, *, existing: Path | None = None) -> Path:
+    """Immutable cached Git objects; each model receives a fresh checkout at base_commit."""
+    from filelock import FileLock
+
+    from core.data import offline
+
+    cache = Path(os.environ.get("SWE_REPO_CACHE", Path.home() / ".cache/mas-promptbench/repos"))
+    target = cache / (repo.replace("/", "--") + ".git")
+    cache.mkdir(parents=True, exist_ok=True)
+    with FileLock(str(target) + ".lock", timeout=1000):
+        if target.exists() and _git(target, "cat-file", "-e", f"{base_commit}^{{commit}}").returncode == 0:
+            return target
+        roots = [Path(p) for p in os.environ.get("SWE_LOCAL_REPO_ROOTS", "").split(os.pathsep) if p]
+        roots.extend(Path.home().glob("swe_work_*"))
+        candidates = ([existing] if existing and existing.exists() else []) + [r / instance_id for r in roots]
+        seed = next(
+            (
+                p
+                for p in candidates
+                if p.exists() and _git(p, "cat-file", "-e", f"{base_commit}^{{commit}}").returncode == 0
+            ),
+            None,
+        )
+        if seed is None and offline():
+            raise FileNotFoundError(f"repository_cache_missing: {repo}@{base_commit}")
+        if target.exists():
+            source = str(seed.resolve()) if seed else f"https://github.com/{repo}.git"
+            fetched = _git(
+                target, "fetch", "--no-tags", source, f"{base_commit}:refs/mas-promptbench/{base_commit}", timeout=900
+            )
+            if fetched.returncode or _git(target, "cat-file", "-e", f"{base_commit}^{{commit}}").returncode:
+                raise RuntimeError(f"repository_fetch_failed: {fetched.stderr}")
+            return target
+        # Clone to a sibling first so an interrupted download cannot poison the cache.
+        with tempfile.TemporaryDirectory(prefix=".repo-", dir=cache) as temp:
+            temporary = Path(temp) / "repository"
+            source = str(seed.resolve()) if seed else f"https://github.com/{repo}.git"
+            logger.info("[swe] repository source: %s", source)
+            result = subprocess.run(
+                ["git", "clone", "--mirror", source, str(temporary)], capture_output=True, text=True, timeout=900
+            )
+            if result.returncode or _git(temporary, "cat-file", "-e", f"{base_commit}^{{commit}}").returncode:
+                raise RuntimeError(f"repository_clone_failed: {result.stderr}")
+            if target.exists():
+                raise RuntimeError(f"repository_cache_invalid: {target}")
+            temporary.rename(target)
+    return target
 
 
 def _git(repo: Path, *args: str, timeout: int = 120) -> subprocess.CompletedProcess:
@@ -838,17 +892,30 @@ def ensure_sif(instance_id: str) -> Path:
 
     RuntimeError if the pull fails.
     """
+    from filelock import FileLock
+
+    from core.data import offline
+
     sif = SIF_DIR / f"{instance_id}.sif"
-    if sif.exists():
-        return sif
     SIF_DIR.mkdir(parents=True, exist_ok=True)
-    docker_ref = SWEBENCH_IMAGE.format(tag=instance_id.replace("__", "_1776_"))
-    logger.info("[swe] pulling %s -> %s", docker_ref, sif.name)
-    result = subprocess.run(
-        ["singularity", "pull", str(sif), docker_ref], capture_output=True, text=True, timeout=SIF_PULL_TIMEOUT_S
-    )
-    if result.returncode != 0:
-        raise RuntimeError(f"singularity pull failed for {instance_id}: {result.stderr.strip()}")
+    with FileLock(str(sif) + ".lock", timeout=SIF_PULL_TIMEOUT_S + 60):
+        if sif.exists() and sif.stat().st_size > 0:
+            return sif
+        if offline():
+            raise FileNotFoundError(f"container_cache_missing: {sif}")
+        docker_ref = SWEBENCH_IMAGE.format(tag=instance_id.replace("__", "_1776_"))
+        logger.info("[swe] pulling %s -> %s", docker_ref, sif.name)
+        with tempfile.TemporaryDirectory(prefix=".pull-", dir=SIF_DIR) as temporary:
+            downloaded = Path(temporary) / "image.sif"
+            result = subprocess.run(
+                ["singularity", "pull", str(downloaded), docker_ref],
+                capture_output=True,
+                text=True,
+                timeout=SIF_PULL_TIMEOUT_S,
+            )
+            if result.returncode or not downloaded.exists():
+                raise RuntimeError(f"container_pull_failed: {instance_id}: {result.stderr.strip()}")
+            downloaded.replace(sif)
     return sif
 
 
@@ -906,46 +973,10 @@ def run_tests_singularity(
     timeout, fails every test and sets ``error``. The combined pytest output is
     kept in ``eval_<id>.log`` under :func:`eval_log_dir`.
     """
-    iid = instance["instance_id"]
-    sif = ensure_sif(iid)
-    test_ids = list(fail_to_pass) + list(pass_to_pass)
-    if not test_ids:
-        return _report([], [], lambda _: True)  # rates 1.0
-    patch_path = _temp_patch(patch or "")
-    test_patch_path = _temp_patch(instance.get("test_patch") or "")
-    try:
-        cmd = [
-            "singularity",
-            "exec",
-            "--writable-tmpfs",
-            "--bind",
-            f"{patch_path}:/tmp/model.patch:ro",
-            "--bind",
-            f"{test_patch_path}:/tmp/test.patch:ro",
-            str(sif),
-            "bash",
-            "-c",
-            SIF_EVAL_SCRIPT,
-            "bash",  # $0 of the inline script
-            *test_ids,
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout_s)
-    except subprocess.TimeoutExpired:
-        return _failed_report(fail_to_pass, pass_to_pass, "timeout")
-    finally:
-        for path in (patch_path, test_patch_path):
-            Path(path).unlink(missing_ok=True)
+    from core.swe_harness import ensure_reference, evaluate
 
-    combined = (result.stdout or "") + "\n" + (result.stderr or "")
-    log_dir = eval_log_dir()
-    log_dir.mkdir(parents=True, exist_ok=True)
-    (log_dir / f"eval_{iid}.log").write_text(combined)
-    if "__TEST_PATCH_APPLY_FAILED__" in combined:
-        return _failed_report(fail_to_pass, pass_to_pass, "test_patch apply failed", combined[-500:])
-    if "__APPLY_FAILED__" in combined:
-        return _failed_report(fail_to_pass, pass_to_pass, "patch apply failed", combined[-500:])
-    status = _verdicts(combined, test_ids)
-    return _report(fail_to_pass, pass_to_pass, lambda tid: status.get(tid) in PASSING_VERDICTS)
+    ensure_reference(instance)
+    return evaluate(instance, patch, timeout_s=timeout_s)
 
 
 def _temp_patch(text: str) -> str:
@@ -1019,6 +1050,8 @@ def run_tests_local(repo_dir: Path, fail_to_pass: list[str], pass_to_pass: list[
 
 def is_resolved(report: dict) -> bool:
     """SWE-bench RESOLVED verdict: both rates must equal 1.0 (strict)."""
+    if "resolved" in report:
+        return bool(report["resolved"])
     return report.get("f2p_rate") == 1.0 and report.get("p2p_rate") == 1.0
 
 
@@ -1047,7 +1080,8 @@ def score_selected(selected: dict, instance: dict) -> None:
     try:
         report = run_tests_singularity(instance, selected["patch"], f2p, p2p)
     except Exception as e:
-        report = {"error": f"{type(e).__name__}: {e}"}
+        selected["report"] = {"error": f"{type(e).__name__}: {e}"}
+        return
     selected.update(report=report, resolved=is_resolved(report))
     selected["score"] = report.get("f2p_rate", 0.0) * report.get("p2p_rate", 0.0)
 
@@ -1103,7 +1137,7 @@ def eval_fields(eval_mode: str, report: dict | None, *, eval_s: float | None = N
         return {"eval": "skipped"}
     if report is None:
         return {"eval_mode": eval_mode, "resolved": False, "f2p_rate": 0.0, "p2p_rate": 0.0}
-    fields = {"eval_mode": eval_mode}
+    fields: dict[str, object] = {"eval_mode": eval_mode}
     if eval_s is not None:
         fields["eval_s"] = eval_s
     fields.update(
@@ -1166,11 +1200,12 @@ def peer_trace(out: dict) -> str:
 
 
 def write_artifacts(out_dir: Path, instance_id: str, patch: str, entry: dict, trace: str) -> None:
-    """Write ``patches/<id>.diff``, append ``entry`` to ``predictions.jsonl`` and write ``traces/<id>.txt``."""
+    """Write per-instance patch, prediction and trace. The parent batch owns the combined JSONL."""
     (out_dir / "patches").mkdir(parents=True, exist_ok=True)
     (out_dir / "patches" / f"{instance_id}.diff").write_text(patch)
-    with (out_dir / "predictions.jsonl").open("a") as f:
-        f.write(json.dumps(entry) + "\n")
+    from core.profiles import atomic_json
+
+    atomic_json(out_dir / "submissions" / f"{instance_id}.prediction.json", entry)
     (out_dir / "traces").mkdir(parents=True, exist_ok=True)
     (out_dir / "traces" / f"{instance_id}.txt").write_text(trace)
 
@@ -1190,6 +1225,15 @@ def _summarize(records: list[dict]) -> dict:
     return {"n": len(records), "resolved": sum(1 for r in records if r.get("resolved") is True)}
 
 
+def _saved_prediction(out_dir: Path, instance: dict) -> dict:
+    path = out_dir / "submissions" / f"{instance['instance_id']}.prediction.json"
+    if path.exists():
+        return json.loads(path.read_text(encoding="utf-8"))
+    from core import settings
+
+    return predictions_entry(instance["instance_id"], "", settings.model_id())
+
+
 def run_batch(
     instances: list[dict],
     run_one: Callable[[dict], dict],
@@ -1199,11 +1243,12 @@ def run_batch(
     workdirs: Callable[[dict], list[Path]] | None = None,
     omit: str | None = None,
     predictions: Path | None = None,
+    workers: int = 1,
 ) -> list[dict]:
     """Run ``run_one`` on every instance; returns the records.
 
-    ``run_one`` appends to ``out_dir/predictions.jsonl`` (emptied first); the
-    records go to ``out_dir/results.jsonl``. Progress is logged (the ``omit``
+    ``run_one`` writes individual prediction artifacts; the parent rebuilds
+    predictions.jsonl and results.jsonl. Progress is logged (the ``omit``
     field left out) and the end-of-batch report goes to stderr; the ``workdirs``
     of an instance are removed after it. A ``predictions`` path other than
     ``out_dir/predictions.jsonl`` receives a copy of the predictions at the end.
@@ -1211,7 +1256,6 @@ def run_batch(
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     predictions_path = out_dir / "predictions.jsonl"
-    predictions_path.write_text("")
     results_path = out_dir / "results.jsonl"
 
     def row(index: int, inst: dict) -> dict:
@@ -1233,14 +1277,15 @@ def run_batch(
             row,
             summarize=_summarize,
             out_path=results_path,
+            workers=workers,
+            outputs=[batch.Output(predictions_path, lambda inst, rec: _saved_prediction(out_dir, inst))],
             stream=sys.stderr,
             header=lambda index, total, inst: (
                 f"\n[{index + 1}/{total}] {inst['instance_id']}  ({inst['repo']}@{inst['base_commit'][:7]})"
             ),
-            progress=lambda index,
-            total,
-            record,
-            done: f"  -> {json.dumps({k: v for k, v in record.items() if k != omit})}",
+            progress=lambda index, total, record, done: (
+                f"  -> {json.dumps({k: v for k, v in record.items() if k != omit})}"
+            ),
             banner=banner,
         )
     finally:

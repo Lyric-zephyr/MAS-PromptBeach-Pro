@@ -64,30 +64,41 @@ def test_wikipedia_tool_description_is_its_docstring(monkeypatch):
     page = task.make_wikipedia_page(task.PAGE_DOC_SHORT, options_label="options:")
     assert page.__name__ == "wikipedia_page" and page.__doc__ == task.PAGE_DOC_SHORT
 
-    def disambiguation(title, auto_suggest):
-        raise task.wikipedia.DisambiguationError(title, ["A", "B"])
+    monkeypatch.setattr(
+        task,
+        "_wiki_request",
+        lambda params: {
+            "status": "ok",
+            "http_status": 200,
+            "data": {"query": {"pages": {"1": {"title": "Mercury", "pageprops": {"disambiguation": ""}}}}},
+        },
+    )
+    assert json.loads(page("Mercury"))["status"] == "disambiguation"
+    monkeypatch.setattr(task, "_wiki_request", lambda params: {"status": "ok", "http_status": 200, "data": {}})
+    assert json.loads(search.invoke({"query": "nothing"}))["status"] == "no_results"
 
-    monkeypatch.setattr(task.wikipedia, "page", disambiguation)
-    assert page("Mercury") == "ERROR: 'Mercury' is a disambiguation page; options: ['A', 'B']"
-    monkeypatch.setattr(task.wikipedia, "search", lambda query, results: [])
-    assert search.invoke({"query": "nothing"}) == "[no Wikipedia results for 'nothing']"
 
+def test_wikipedia_reports_http_errors_and_bounded_content(monkeypatch):
+    import requests
 
-def test_read_page_reports_a_failed_content_fetch_as_an_error_line(monkeypatch):
-    class Page:
-        def __init__(self, content: str | None):
-            self._content = content
+    seen = []
 
-        @property
-        def content(self) -> str:
-            if self._content is None:
-                raise json.JSONDecodeError("Expecting value", "<html>", 0)
-            return self._content
+    class Response:
+        status_code = 403
 
-    monkeypatch.setattr(task.wikipedia, "page", lambda title, auto_suggest: Page(None))
-    assert task.read_page("Paris") == "ERROR: Expecting value: line 1 column 1 (char 0)"
-    monkeypatch.setattr(task.wikipedia, "page", lambda title, auto_suggest: Page("x" * (task.PAGE_CHAR_BUDGET + 1)))
-    assert task.read_page("Paris") == "x" * task.PAGE_CHAR_BUDGET + "..."
+        def json(self):
+            return {"query": {"pages": {"1": {"title": "Paris", "extract": "x" * 4001}}}}
+
+    def get(url, **kwargs):
+        seen.append((url, kwargs))
+        return Response()
+
+    monkeypatch.setattr(requests, "get", get)
+    assert json.loads(task.read_page("Paris")) == {"status": "http_error", "http_status": 403}
+    Response.status_code = 200
+    result = json.loads(task.read_page("Paris"))
+    assert result["status"] == "ok" and len(result["content"]) == 4000 and result["truncated"]
+    assert seen[0][0].startswith("https://") and seen[0][1]["headers"]["User-Agent"]
 
 
 @pytest.mark.parametrize("size", teams.TEAM_SIZES)

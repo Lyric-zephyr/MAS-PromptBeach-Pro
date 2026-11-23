@@ -13,6 +13,7 @@ import base64
 import json
 import os
 import subprocess
+import sys
 import zlib
 from collections.abc import Callable
 from decimal import Decimal, InvalidOperation
@@ -77,10 +78,10 @@ def load_instances(
     platform: str | None = None,
 ) -> list[dict]:
     """Rows with private tests as ``{id, problem, starter_code, tests, difficulty, platform, raw}``."""
-    from datasets import load_dataset
+    from core.data import lcb_rows, validate_ids
 
     rows: list[dict] = []
-    for row in load_dataset(HF_DATASET, split=HF_SPLIT, trust_remote_code=True):
+    for row in lcb_rows():
         rid = row.get("question_id") or ""
         if only is not None and rid not in set(only):
             continue
@@ -94,6 +95,19 @@ def load_instances(
         tests = decode_private_tests(row.get("private_test_cases") or "")
         if not tests:
             continue
+        metadata = row.get("metadata") or {}
+        if isinstance(metadata, str):
+            metadata = json.loads(metadata)
+        function_name = metadata.get("func_name")
+        tests = [dict(tc) for tc in tests]
+        for tc in tests:
+            if function_name:
+                tc.setdefault("fn_name", function_name)
+                tc.setdefault("testtype", "functional")
+            if tc.get("testtype") == "functional":
+                if not (tc.get("fn_name") or tc.get("func_name")):
+                    raise ValueError(f"dataset_function_name_missing: {rid}")
+                tc["input_format"] = "json_lines"
         rows.append(
             {
                 "id": rid,
@@ -108,6 +122,11 @@ def load_instances(
                 },
             }
         )
+        if only is not None and len({r["id"] for r in rows}) == len(set(only)):
+            break
+        if only is None and limit is not None and len(rows) >= offset + limit:
+            break
+    validate_ids(rows, only)
     rows = rows[offset:]
     return rows if limit is None else rows[:limit]
 
@@ -189,7 +208,7 @@ def compare_stdout(actual: str, expected: str) -> bool:
 def _run_stdin_test(code: str, tc: dict, timeout_s: int) -> dict:
     try:
         result = subprocess.run(
-            ["python", "-c", code], input=tc.get("input", ""), capture_output=True, text=True, timeout=timeout_s
+            [sys.executable, "-c", code], input=tc.get("input", ""), capture_output=True, text=True, timeout=timeout_s
         )
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": "timeout"}
@@ -219,9 +238,15 @@ def _run_functional_test(code: str, tc: dict, timeout_s: int) -> dict:
     fn_name = tc.get("fn_name") or tc.get("func_name")
     if not fn_name:
         return {"ok": False, "error": "functional test missing fn_name"}
-    args = _parse_maybe_json(tc.get("input", "[]"))
-    if not isinstance(args, (list, tuple)):
-        args = [args]
+    raw_input = tc.get("input", "[]")
+    if tc.get("input_format") == "json_lines":
+        # LCB stores one JSON value PER ARGUMENT, even when that value is a list.
+        args = [json.loads(line) for line in raw_input.splitlines() if line.strip()]
+    else:
+        # Older hand-written demos use a single packed argument list.
+        args = _parse_maybe_json(raw_input)
+        if not isinstance(args, (list, tuple)):
+            args = [args]
     expected = _parse_maybe_json(tc.get("output"))
     called = code_tasks.guarded_call(code, fn_name, args, timeout_s, FUNCTIONAL_MEMORY_BYTES)
     if not called["ok"]:

@@ -1,34 +1,61 @@
-<div align="center">
-  <img src="https://juyangbai.github.io/MAS-PromptBench/assets/MAS-PromptBench_lockup.svg" alt="MAS-PromptBench" width="560">
-</div>
+# MAS-PromptBeach-Pro
 
-<p align="center">
-  <a href="https://arxiv.org/abs/2606.23664"><img src="https://img.shields.io/badge/arXiv-2606.23664-b31b1b" alt="arXiv"></a>
-  <a href="https://juyangbai.github.io/MAS-PromptBench/"><img src="https://img.shields.io/badge/Project-Page-1f4e8c" alt="Project Page"></a>
-  <a href="https://juyangbai.github.io/MAS-PromptBench/docs/"><img src="https://img.shields.io/badge/Project-Docs-3b82c4" alt="Project Docs"></a>
-  <a href="https://deepwiki.com/juyangbai/MAS-PromptBench"><img src="assets/deepwiki-badge.svg" alt="Ask DeepWiki"></a>
-</p>
+A version of MAS-PromptBench with resumable benchmark runs, reusable model settings, and fixes for dataset loading and scoring.
 
-<h2 align="center">
-  A Benchmark of Prompt Optimization for Multi-Agent LLM Systems
-</h2>
+This project is based on the original benchmark by Juyang Bai and Laixi Shi. See the [upstream repository](https://github.com/juyangbai/MAS-PromptBench), the [original paper](https://arxiv.org/abs/2606.23664), and the [MIT license](LICENSE).
+
+[中文改动说明与使用方法](docs/benchmark_reliability.md) · [Documentation](docs/content/index.md)
 
 <details open>
 <summary><b>Contents</b></summary>
 
-1. [News and Updates](#-news-and-updates)
-2. [Introduction](#-introduction)
-3. [Code Structure](#-code-structure)
-4. [Quickstart](#-quickstart)
-5. [How to Extend](#-how-to-extend)
-6. [Referenced Resources](#-referenced-resources)
-7. [Citation](#-citation)
+1. [Changes in MAS-PromptBeach-Pro](#changes-in-mas-promptbeach-pro)
+2. [News and Updates](#-news-and-updates)
+3. [Introduction](#-introduction)
+4. [Code Structure](#-code-structure)
+5. [Quickstart](#-quickstart)
+6. [How to Extend](#-how-to-extend)
+7. [Referenced Resources](#-referenced-resources)
+8. [Citation](#-citation)
 
 </details>
 
 ---
 
+## Changes in MAS-PromptBeach-Pro
+
+The main changes are in the centralized LangGraph runners and the shared API-Bank and ToolHop paths. Other runners can reuse the shared settings and dataset loaders.
+
+- Save generated answers, code, patches, and token usage before scoring on supported paths. Use `--resume` to continue a run and `--retry-execution-errors` to retry execution failures. Result records distinguish these failures from ordinary wrong answers.
+- Reuse model settings without storing API keys. Adapt known request fields for providers such as Qwen and DeepSeek, and check dataset dependencies before GPQA runs.
+- Use HTTPS and a fixed User-Agent for HotpotQA's Wikipedia requests. In GPQA and BFCL, return an error `ToolMessage` if tool arguments cannot be parsed or a completed call has no reply.
+- Fix function-based LiveCodeBench judging by reading the method name from metadata, parsing one argument per line, providing `typing` names such as `List`, and sending large inputs over standard input. APPS prefers local data and can fetch the test split's `test.jsonl` from a pinned revision.
+- Reuse local SWE-bench repositories and container images, cache reference-patch checks, and use the official scoring library for project-specific test commands and log parsing. The centralized runner supports up to two evaluation workers.
+
+### New files
+
+| File | Purpose |
+| --- | --- |
+| [`core/checkpoints.py`](core/checkpoints.py) | Save generated artifacts and classify failures so interrupted runs can continue. |
+| [`core/data.py`](core/data.py) | Look for prepared datasets and Hugging Face caches before downloading. |
+| [`core/preflight.py`](core/preflight.py) | Check compatibility of `numpy`, `pyarrow`, and `datasets`. |
+| [`core/profiles.py`](core/profiles.py) | Save and load model settings, including the last successful configuration for a model and endpoint. |
+| [`core/providers.py`](core/providers.py) | Adapt request fields such as output token limits and thinking flags to known endpoints. |
+| [`core/swe_harness.py`](core/swe_harness.py) | Run SWE-bench's official test and scoring logic in cached Singularity images. |
+| [`core/swe_prepare.py`](core/swe_prepare.py) | Prepare SWE-bench repositories and images ahead of evaluation. |
+| [`docs/benchmark_reliability.md`](docs/benchmark_reliability.md) | Explain configuration, caching, resume options, and task fixes in Chinese. |
+| [`tests/core/test_benchmark_reliability.py`](tests/core/test_benchmark_reliability.py) | Cover request adaptation, checkpoints, and execution failure handling. |
+| [`tests/core/test_dataset_and_judge_regressions.py`](tests/core/test_dataset_and_judge_regressions.py) | Cover local dataset reuse and APPS and LiveCodeBench judging. |
+| [`tests/core/test_successful_profiles.py`](tests/core/test_successful_profiles.py) | Check that successful settings can be reused and are preserved after failed trials. |
+| [`tests/core/test_swe_reliability.py`](tests/core/test_swe_reliability.py) | Cover repository reuse, reference checks, and scoring failure handling. |
+
+See the [benchmark reliability guide](docs/benchmark_reliability.md) for setup and usage.
+
+---
+
 ## 🔔 News and Updates
+
+Updates from the original MAS-PromptBench project:
 
 - **[2026-10-22]** — Supports eight prompt optimizers under a unified run protocol, with a codebase refactored onto a shared core.
 - **[2026-06-22]** — Initial public release of the code!
@@ -77,10 +104,9 @@ Go from a fresh clone to scored results in four steps — install, serve a model
 
 ### 1. Install
 
-```bash
-git clone https://github.com/juyangbai/MAS-PromptBench.git
-cd MAS-PromptBench
+Clone this repository using GitHub's **Code** button, then run the commands below from the cloned directory.
 
+```bash
 conda env create -f environment.yml      # Python 3.11 + vLLM + benchmark and optimizer deps
 conda activate mas-promptbench
 pip install --target vendor/openai_agents -r requirements-openai-agents.txt   # OpenAI Agents SDK (needs openai>=3, kept isolated)
@@ -90,7 +116,7 @@ pip install --target vendor/openai_agents -r requirements-openai-agents.txt   # 
 
 ### 2. Serve a model
 
-Every agent talks to the same **OpenAI-compatible** chat endpoint (vLLM, or a server that accepts vLLM's sampling fields), configured via `VLLM_BASE_URL` and `MODEL_ID`. Serve a model from [`models/`](models/), then point runs at it:
+Set `VLLM_BASE_URL` and `MODEL_ID` to an **OpenAI-compatible** chat endpoint and model. For a hosted endpoint such as Qwen or DeepSeek, set your own `OPENAI_API_KEY` and follow the [model configuration guide](docs/benchmark_reliability.md#1-保存和复用模型配置). To serve a model locally, use a script from [`models/`](models/):
 
 ```bash
 bash models/serve_qwen3_5_9b.sh
@@ -177,7 +203,7 @@ MAS-PromptBench builds on the agent frameworks and libraries below, which retain
 
 ## 📚 Citation
 
-If you use MAS-PromptBench in your research, please cite it:
+If you use MAS-PromptBeach-Pro in your research, please cite the original MAS-PromptBench paper:
 
 ```bibtex
 @article{bai2026mas,

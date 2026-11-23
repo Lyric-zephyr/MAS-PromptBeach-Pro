@@ -19,12 +19,13 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, create_react_agent
+from langgraph.prebuilt import create_react_agent
 from typing_extensions import TypedDict
 
 from core import prompts, settings, teams
 from core.communication import CommPolicy
 from core.llm import chat_openai
+from core.runtime import closed_tool_history, generation_diagnostics, safe_tool_node
 from core.tasks import swe as task
 from core.tasks.swe import (  # noqa: F401  (runner API)
     clone_and_checkout,
@@ -75,7 +76,7 @@ DELEGATION_TOOLS = [_delegate_tool(worker) for worker in TEAM.workers]
 globals().update((t.name, t) for t in DELEGATION_TOOLS)  # each tool is also an attribute: delegate_to_<worker>
 DELEGATION_NAMES = {t.name for t in DELEGATION_TOOLS}
 MANAGER_TOOLS = [TOOLS[name] for name in TEAM.manager_tools] + DELEGATION_TOOLS
-_manager_tool_node = ToolNode(MANAGER_TOOLS)
+_manager_tool_node = safe_tool_node(MANAGER_TOOLS)
 
 _MANAGER_TERMINATE_NUDGE = task.TERMINATE_NUDGE + "\n\n" + TEAM.delegation_note
 
@@ -130,9 +131,12 @@ def _manager_system() -> str:
 
 def _manager_node(state: CentralizedState) -> dict:
     llm = _build_llm().bind_tools(MANAGER_TOOLS)
-    ai = llm.invoke([SystemMessage(content=_manager_system())] + state["messages"])
+    ai = llm.invoke([SystemMessage(content=_manager_system())] + closed_tool_history(state["messages"]))
     _tag_source(ai, "manager")
-    return {"messages": [ai], "turn_count": int(state.get("turn_count", 0)) + 1}
+    return {
+        "messages": [*closed_tool_history(state["messages"]), ai],
+        "turn_count": int(state.get("turn_count", 0)) + 1,
+    }
 
 
 def _route_from_manager(state: CentralizedState) -> str:
@@ -167,9 +171,9 @@ def _make_worker_node(name: str, tools: list, llm: ChatOpenAI, extra_prompt: str
     agent = create_react_agent(model=llm, tools=tools, prompt=_load_prompt(name) + extra_prompt)
 
     def node(state: CentralizedState) -> dict:
-        prior = list(state["messages"])
+        prior = closed_tool_history(list(state["messages"]))
         result = agent.invoke({"messages": prior}, config={"recursion_limit": TEAM.recursion_limit})
-        new_msgs = result["messages"][len(prior) :]
+        new_msgs = closed_tool_history(result["messages"][len(prior) :])
         for m in new_msgs:
             if isinstance(m, AIMessage):
                 _tag_source(m, name)
@@ -212,7 +216,11 @@ def _communications_source(m: BaseMessage) -> str:
 
 def _communications_to_record(m: BaseMessage) -> dict:
     content = getattr(m, "content", "") or ""
-    return {"source": _communications_source(m), "content": content if isinstance(content, str) else str(content)}
+    return {
+        "source": _communications_source(m),
+        "content": content if isinstance(content, str) else str(content),
+        "message": m.model_dump(mode="json"),
+    }
 
 
 def solve(instance: dict, eval_mode: str = "singularity") -> dict:
@@ -237,6 +245,7 @@ def solve(instance: dict, eval_mode: str = "singularity") -> dict:
         "report": None,
         "messages": [_communications_to_record(m) for m in msgs],
         "telemetry": normalize(langchain_telemetry(msgs)),
+        "diagnostics": generation_diagnostics(msgs, turn_limit_reached=int(result.get("turn_count", 0)) >= MAX_TURNS),
     }
     if eval_mode != "none" and out["patch"]:
         f2p, p2p = task.instance_tests(instance)
@@ -247,19 +256,40 @@ def solve(instance: dict, eval_mode: str = "singularity") -> dict:
 
 def run_one(instance: dict, workdir_root: Path, out_dir: Path, eval_mode: str = "singularity") -> dict:
     """Clone, solve and score one instance; writes its patch, prediction and chat trace under ``out_dir``."""
-    summary, out = task.solve_in_checkout(
-        instance, workdir_root, _set_repo_dir, lambda: solve(instance, eval_mode=eval_mode)
-    )
-    if out is None:
-        return summary
+    from core.checkpoints import cached_call
+    from core.swe_harness import ensure_reference
+
+    if eval_mode == "singularity":
+        ensure_reference(instance)
+
+    def generate():
+        summary, output = task.solve_in_checkout(
+            instance, workdir_root, _set_repo_dir, lambda: solve(instance, eval_mode="none")
+        )
+        if output is None:
+            raise RuntimeError(summary.get("error", "generation_failed"))
+        return {"summary": summary, "output": output}
+
+    try:
+        saved = cached_call(generate)
+    except Exception as exc:
+        return task.record_head(instance, error=f"{type(exc).__name__}: {exc}", stage="solve")
+    summary, out = saved["summary"], saved["output"]
     summary.update(out.get("telemetry") or {})
+    summary["diagnostics"] = out.get("diagnostics")
     patch = out["patch"] or ""
     messages = out.get("messages") or []
     summary.update(patch_chars=len(patch), n_messages=len(messages))
     iid = instance["instance_id"]
     trace = task.sections((str(m.get("source", "?")).upper(), m.get("content", "")) for m in messages)
     task.write_artifacts(out_dir, iid, patch, predictions_entry(iid, patch), trace)
-    return {**summary, **task.eval_fields(eval_mode, out.get("report"))}
+    report = None
+    if eval_mode != "none" and patch:
+        f2p, p2p = task.instance_tests(instance)
+        report = run_tests_singularity(instance, patch, f2p, p2p)
+    if report and report.get("failure_reason"):
+        summary["failure_reason"] = report["failure_reason"]
+    return {**summary, **task.eval_fields(eval_mode, report)}
 
 
 def _run_instances(
@@ -269,6 +299,7 @@ def _run_instances(
     eval_mode: str = "singularity",
     keep_workdirs: bool = False,
     out_path: Path | None = None,
+    workers: int = 1,
 ) -> None:
     """Solve and score loaded instances (the command line's batch)."""
     workdir_root = workdir_root or DEFAULT_WORKDIR_ROOT
@@ -280,6 +311,7 @@ def _run_instances(
         eval_mode=eval_mode,
         workdirs=None if keep_workdirs else lambda inst: [workdir_root / inst["instance_id"]],
         predictions=out_path,
+        workers=workers,
     )
 
 
@@ -292,11 +324,12 @@ def run_batch(
     out_dir: Path | None = None,
     eval_mode: str = "singularity",
     keep_workdirs: bool = False,
+    workers: int = 1,
 ) -> None:
     """Solve and score a Verified slice (``eval_mode``: ``singularity`` or ``none``)."""
     instances = load_instances(subset, limit, offset, only)
     task.log_loaded(instances)
-    _run_instances(instances, out_dir, workdir_root, eval_mode, keep_workdirs)
+    _run_instances(instances, out_dir, workdir_root, eval_mode, keep_workdirs, workers=workers)
 
 
 def main(argv: list[str] | None = None) -> int:

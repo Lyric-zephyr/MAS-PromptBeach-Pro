@@ -35,6 +35,7 @@ import argparse
 import inspect
 import json
 import logging
+import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,6 +76,12 @@ def build_parser(
     parser.add_argument("--batch", action="store_true", help="run the benchmark slice (default: the canned demo)")
     parser.add_argument("--limit", type=int, default=default_limit, metavar="N", help="evaluate at most N instances")
     parser.add_argument("--offset", type=int, default=0, metavar="K", help="skip the first K instances")
+    parser.add_argument("--resume", action="store_true", help="reuse completed rows and saved model artifacts")
+    parser.add_argument(
+        "--retry-execution-errors",
+        action="store_true",
+        help="with --resume, retry execution faults (never ordinary wrong answers)",
+    )
     parser.add_argument(
         "--only",
         action="extend",
@@ -124,7 +131,7 @@ def main(
     *,
     description: str,
     load_instances: Callable[..., list[dict]],
-    run_batch: Callable[..., dict],
+    run_batch: Callable[..., object],
     demo: Callable[[], None] | None = None,
     source: str = "",
     predictions: Path | None = None,
@@ -144,6 +151,8 @@ def main(
     """
     parser = build_parser(description, add_arguments, default_limit=default_limit, epilog=epilog, info=info)
     args = parser.parse_args(argv)
+    if args.retry_execution_errors and not args.resume:
+        parser.error("--retry-execution-errors requires --resume")
     logs.configure()
     options = vars(args)
     if args.only:
@@ -160,6 +169,10 @@ def main(
         return 0
     if source:
         logger.info("loading %s ...", source)
+    if "GPQA" in description.upper():
+        from core.preflight import require
+
+        require()
     instances = load_instances(**_accepted(load_instances, options))
     if not instances:
         logger.error("no instances loaded (check --limit/--offset/--only)")
@@ -167,7 +180,25 @@ def main(
     logger.info("  loaded %d instance(s)", len(instances))
     out_path = predictions_path(args, predictions)
     try:
-        run_batch(instances, **_accepted(run_batch, {**options, "out_path": out_path}))
+        from core.checkpoints import options as run_options
+
+        signature = {
+            key: str(value) if isinstance(value, Path) else value
+            for key, value in options.items()
+            if key not in {"resume", "retry_execution_errors", "workers"}
+        }
+        # Team-size entry modules share description text; retain the actual
+        # entry file so r4 and r8 cannot silently share a resume directory.
+        signature["runner_entry"] = str(Path(sys.argv[0]).resolve())
+        with run_options(
+            resume=args.resume,
+            retry_execution_errors=args.retry_execution_errors,
+            protect_outputs=True,
+            remember_model=True,
+            entrypoint=description,
+            arguments=signature,
+        ):
+            run_batch(instances, **_accepted(run_batch, {**options, "out_path": out_path}))
     except batch.InfrastructureFailure as exc:
         logger.error("%s", exc)
         return 1

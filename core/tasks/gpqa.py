@@ -74,10 +74,10 @@ def load_instances(
     The choices of row ``id`` are shuffled with the seed ``f"{shuffle_seed}|{id}"``;
     rows missing the correct answer or a distractor are skipped.
     """
-    from datasets import load_dataset
+    from core.data import load_dataset
 
     rows: list[dict] = []
-    for index, row in enumerate(load_dataset(HF_DATASET, HF_CONFIG)[HF_SPLIT]):
+    for index, row in enumerate(load_dataset(HF_DATASET, HF_CONFIG, split=HF_SPLIT)):
         rid = row_id(row, index)
         if only is not None and rid not in set(only):
             continue

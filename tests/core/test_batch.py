@@ -30,7 +30,10 @@ def test_run_batch_writes_records_and_summary(tmp_path, capsys, caplog):
         banner=lambda s: f"done {s['n']}",
     )
     assert list(summary) == ["n", "total_s", "per_instance"]
-    assert summary["per_instance"] == [{"id": "a", "index": 0}, {"id": "b", "index": 1}]
+    assert summary["per_instance"] == [
+        {"id": "a", "index": 0, "status": "completed", "error_category": None},
+        {"id": "b", "index": 1, "status": "completed", "error_category": None},
+    ]
     assert [json.loads(line) for line in out_path.read_text().splitlines()] == summary["per_instance"]
     assert caplog.messages == ["1/2 a 1", "2/2 b 2"]  # progress is logged
     assert capsys.readouterr().out == "done 2\n"  # the report is printed
@@ -54,7 +57,8 @@ def test_run_batch_starts_its_files_afresh_and_returns_the_raw_summary(tmp_path,
         raw_summary=True,
     )
     assert summary == {"n": 1}
-    assert out_path.read_text() == '{"id": "ü"}\n' and extra.read_text() == '{"pred": "ü"}\n'
+    assert json.loads(out_path.read_text()) == {"id": "\u00fc", "status": "completed", "error_category": None}
+    assert json.loads(extra.read_text()) == {"pred": "\u00fc"}
     assert caplog.messages == ["[1/1] ü"]
     captured = capsys.readouterr()
     assert captured.err.endswith("done 1\n") and captured.out == ""

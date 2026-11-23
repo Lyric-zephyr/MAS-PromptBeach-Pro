@@ -19,7 +19,7 @@ from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
-from langgraph.prebuilt import ToolNode, create_react_agent
+from langgraph.prebuilt import create_react_agent
 from typing_extensions import TypedDict
 
 from core import cli, code_tasks, prompts, settings, teams
@@ -27,6 +27,7 @@ from core.batch import attempt
 from core.code_tasks import exact_match_score  # noqa: F401  (runner API)
 from core.llm import chat_openai
 from core.paths import RESULTS_DIR
+from core.runtime import closed_tool_history, generation_diagnostics, safe_tool_node
 from core.tasks import apps as task
 from core.tasks.apps import format_prompt, load_instances, run_tests  # noqa: F401
 from core.telemetry import langchain_telemetry, normalize
@@ -64,7 +65,7 @@ DELEGATION_TOOLS = [_delegate_tool(worker) for worker in TEAM.workers]
 globals().update((t.name, t) for t in DELEGATION_TOOLS)  # each tool is also an attribute: delegate_to_<worker>
 DELEGATION_NAMES = {t.name for t in DELEGATION_TOOLS}
 MANAGER_TOOLS = [TOOLS[name] for name in TEAM.manager_tools] + DELEGATION_TOOLS
-_manager_tool_node = ToolNode(MANAGER_TOOLS)
+_manager_tool_node = safe_tool_node(MANAGER_TOOLS)
 
 _MANAGER_TERMINATE_NUDGE = code_tasks.TERMINATE_NUDGE + "\n\n" + TEAM.delegation_note
 
@@ -98,9 +99,12 @@ def _manager_system() -> str:
 
 def _manager_node(state: CentralizedState) -> dict:
     llm = _build_llm().bind_tools(MANAGER_TOOLS)
-    ai = llm.invoke([SystemMessage(content=_manager_system())] + state["messages"])
+    ai = llm.invoke([SystemMessage(content=_manager_system())] + closed_tool_history(state["messages"]))
     _tag_source(ai, "manager")
-    return {"messages": [ai], "turn_count": int(state.get("turn_count", 0)) + 1}
+    return {
+        "messages": [*closed_tool_history(state["messages"]), ai],
+        "turn_count": int(state.get("turn_count", 0)) + 1,
+    }
 
 
 def _route_from_manager(state: CentralizedState) -> str:
@@ -135,9 +139,9 @@ def _make_worker_node(name: str, tools: list, llm: ChatOpenAI):
     agent = create_react_agent(model=llm, tools=tools, prompt=_load_prompt(name))
 
     def node(state: CentralizedState) -> dict:
-        prior = list(state["messages"])
+        prior = closed_tool_history(list(state["messages"]))
         result = agent.invoke({"messages": prior}, config={"recursion_limit": TEAM.recursion_limit})
-        new_msgs = result["messages"][len(prior) :]
+        new_msgs = closed_tool_history(result["messages"][len(prior) :])
         for m in new_msgs:
             if isinstance(m, AIMessage):
                 _tag_source(m, name)
@@ -179,7 +183,11 @@ def _communications_source(m: BaseMessage) -> str:
 
 def _communications_to_record(m: BaseMessage) -> dict:
     content = getattr(m, "content", "") or ""
-    return {"source": _communications_source(m), "content": content if isinstance(content, str) else str(content)}
+    return {
+        "source": _communications_source(m),
+        "content": content if isinstance(content, str) else str(content),
+        "message": m.model_dump(mode="json"),
+    }
 
 
 def _last_code(records: list[dict]) -> str | None:
@@ -210,7 +218,13 @@ def solve(problem: str, starter_code: str | None = None) -> dict:
     code = extract_code(final)
     if code is None:
         code = _last_code(rendered)
-    return {"code": code, "raw": final, "messages": rendered, "telemetry": normalize(langchain_telemetry(msgs))}
+    return {
+        "code": code,
+        "raw": final,
+        "messages": rendered,
+        "telemetry": normalize(langchain_telemetry(msgs)),
+        "diagnostics": generation_diagnostics(msgs, turn_limit_reached=int(result.get("turn_count", 0)) >= MAX_TURNS),
+    }
 
 
 def run_batch(
@@ -234,6 +248,7 @@ def run_batch(
             raw=(out.get("raw") or "")[:2000],
             latency_s=round(latency_s, 2),
             **(out.get("telemetry") or {}),
+            diagnostics=out.get("diagnostics"),
             error=error,
         )
 
