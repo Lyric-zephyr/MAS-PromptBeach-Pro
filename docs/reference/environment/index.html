@@ -1,0 +1,878 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Documentation for MAS-PromptBeach-Pro, a derivative of the MAS-PromptBench benchmark.">
+  <meta property="og:title" content="Environment Variables · MAS-PromptBeach-Pro Docs">
+  <meta property="og:description" content="Documentation for MAS-PromptBeach-Pro, a derivative of the MAS-PromptBench benchmark.">
+  <link rel="canonical" href="https://Lyric-zephyr.github.io/MAS-PromptBeach-Pro/docs/reference/environment/">
+  <title>Environment Variables · MAS-PromptBeach-Pro Docs</title>
+  <link rel="icon" type="image/png" href="../../assets/favicon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,700;1,14..32,800&family=JetBrains+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../../assets/docs.css?v=20261123043733">
+  <!-- page transition to and from the project page ("Short glide, ordered") -->
+  <script src="../../assets/mpb-transition.js?v=20261123043733"></script>
+  <link rel="stylesheet" href="../../assets/mpb-transition.css?v=20261123043733">
+  <script>
+    /* Apply a stored theme before first paint. "system" stores nothing. Hosts that
+       sandbox each page block storage, so the tab's
+       window.name carries the choice there. */
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem('mpb-theme'); } catch (e) {}
+      if (!t) { var m = /^mpb-theme=(dark|light)$/.exec(window.name || ''); if (m) t = m[1]; }
+      if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <!-- hold the first frame until the title is parsed, so it can glide (keep at the end of <head>) -->
+  <link rel="expect" href="#mpb-title" blocking="render">
+</head>
+<body>
+<div class="site" data-base-url="../.." data-version="20261123043733">
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.6-3.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></symbol>
+  <symbol id="i-wiki" viewBox="110 110 460 500"><path fill="#21c19a" d="M418.73,332.37c9.84-5.68,22.07-5.68,31.91,0l25.49,14.71c.82.48,1.69.8,2.58,1.06.19.06.37.11.55.16.87.21,1.76.34,2.65.35.04,0,.08.02.13.02.1,0,.19-.03.29-.04.83-.02,1.64-.13,2.45-.32.14-.03.28-.05.42-.09.87-.24,1.7-.59,2.5-1.03.08-.04.17-.06.25-.1l50.97-29.43c3.65-2.11,5.9-6.01,5.9-10.22v-58.86c0-4.22-2.25-8.11-5.9-10.22l-50.97-29.43c-3.65-2.11-8.15-2.11-11.81,0l-50.97,29.43c-.08.04-.13.11-.2.16-.78.48-1.51,1.02-2.15,1.66-.1.1-.18.21-.28.31-.57.6-1.08,1.26-1.51,1.97-.07.12-.15.22-.22.34-.44.77-.77,1.6-1.03,2.47-.05.19-.1.37-.14.56-.22.89-.37,1.81-.37,2.76v29.43c0,11.36-6.11,21.95-15.95,27.63-9.84,5.68-22.06,5.68-31.91,0l-25.49-14.71c-.82-.48-1.69-.8-2.57-1.06-.19-.06-.37-.11-.56-.16-.88-.21-1.76-.34-2.65-.34-.13,0-.26.02-.4.02-.84.02-1.66.13-2.47.32-.13.03-.27.05-.4.09-.87.24-1.71.6-2.51,1.04-.08.04-.16.06-.24.1l-50.97,29.43c-3.65,2.11-5.9,6.01-5.9,10.22v58.86c0,4.22,2.25,8.11,5.9,10.22l50.97,29.43c.08.04.17.06.24.1.8.44,1.64.79,2.5,1.03.14.04.28.06.42.09.81.19,1.62.3,2.45.32.1,0,.19.04.29.04.04,0,.08-.02.13-.02.89,0,1.77-.13,2.65-.35.19-.04.37-.1.56-.16.88-.26,1.75-.59,2.58-1.06l25.49-14.71c9.84-5.68,22.06-5.68,31.91,0,9.84,5.68,15.95,16.27,15.95,27.63v29.43c0,.95.15,1.87.37,2.76.05.19.09.37.14.56.25.86.59,1.69,1.03,2.47.07.12.15.22.22.34.43.71.94,1.37,1.51,1.97.1.1.18.21.28.31.65.63,1.37,1.18,2.15,1.66.07.04.13.11.2.16l50.97,29.43c1.83,1.05,3.86,1.58,5.9,1.58s4.08-.53,5.9-1.58l50.97-29.43c3.65-2.11,5.9-6.01,5.9-10.22v-58.86c0-4.22-2.25-8.11-5.9-10.22l-50.97-29.43c-.08-.04-.16-.06-.24-.1-.8-.44-1.64-.8-2.51-1.04-.13-.04-.26-.05-.39-.09-.82-.2-1.65-.31-2.49-.33-.13,0-.25-.02-.38-.02-.89,0-1.78.13-2.66.35-.18.04-.36.1-.54.15-.88.26-1.75.59-2.58,1.07l-25.49,14.72c-9.84,5.68-22.07,5.68-31.9,0-9.84-5.68-15.95-16.27-15.95-27.63s6.11-21.95,15.95-27.63Z"/><path fill="#3969ca" d="M141.09,317.65l50.97,29.43c1.83,1.05,3.86,1.58,5.9,1.58s4.08-.53,5.9-1.58l50.97-29.43c.08-.04.13-.11.2-.16.78-.48,1.51-1.02,2.15-1.66.1-.1.18-.21.28-.31.57-.6,1.08-1.26,1.51-1.97.07-.12.15-.22.22-.34.44-.77.77-1.6,1.03-2.47.05-.19.1-.37.14-.56.22-.89.37-1.81.37-2.76v-29.43c0-11.36,6.11-21.95,15.96-27.63s22.06-5.68,31.91,0l25.49,14.71c.82.48,1.69.8,2.57,1.06.19.06.37.11.56.16.87.21,1.76.34,2.64.35.04,0,.09.02.13.02.1,0,.19-.04.29-.04.83-.02,1.65-.13,2.45-.32.14-.03.28-.05.41-.09.87-.24,1.71-.6,2.51-1.04.08-.04.16-.06.24-.1l50.97-29.43c3.65-2.11,5.9-6.01,5.9-10.22v-58.86c0-4.22-2.25-8.11-5.9-10.22l-50.97-29.43c-3.65-2.11-8.15-2.11-11.81,0l-50.97,29.43c-.08.04-.13.11-.2.16-.78.48-1.51,1.02-2.15,1.66-.1.1-.18.21-.28.31-.57.6-1.08,1.26-1.51,1.97-.07.12-.15.22-.22.34-.44.77-.77,1.6-1.03,2.47-.05.19-.1.37-.14.56-.22.89-.37,1.81-.37,2.76v29.43c0,11.36-6.11,21.95-15.95,27.63-9.84,5.68-22.07,5.68-31.91,0l-25.49-14.71c-.82-.48-1.69-.8-2.58-1.06-.19-.06-.37-.11-.55-.16-.88-.21-1.76-.34-2.65-.35-.13,0-.26.02-.4.02-.83.02-1.66.13-2.47.32-.13.03-.27.05-.4.09-.87.24-1.71.6-2.51,1.04-.08.04-.16.06-.24.1l-50.97,29.43c-3.65,2.11-5.9,6.01-5.9,10.22v58.86c0,4.22,2.25,8.11,5.9,10.22Z"/><path fill="#0294de" d="M396.88,484.35l-50.97-29.43c-.08-.04-.17-.06-.24-.1-.8-.44-1.64-.79-2.51-1.03-.14-.04-.27-.06-.41-.09-.81-.19-1.64-.3-2.47-.32-.13,0-.26-.02-.39-.02-.89,0-1.78.13-2.66.35-.18.04-.36.1-.54.15-.88.26-1.76.59-2.58,1.07l-25.49,14.72c-9.84,5.68-22.06,5.68-31.9,0-9.84-5.68-15.96-16.27-15.96-27.63v-29.43c0-.95-.15-1.87-.37-2.76-.05-.19-.09-.37-.14-.56-.25-.86-.59-1.69-1.03-2.47-.07-.12-.15-.22-.22-.34-.43-.71-.94-1.37-1.51-1.97-.1-.1-.18-.21-.28-.31-.65-.63-1.37-1.18-2.15-1.66-.07-.04-.13-.11-.2-.16l-50.97-29.43c-3.65-2.11-8.15-2.11-11.81,0l-50.97,29.43c-3.65,2.11-5.9,6.01-5.9,10.22v58.86c0,4.22,2.25,8.11,5.9,10.22l50.97,29.43c.08.04.17.06.25.1.8.44,1.63.79,2.5,1.03.14.04.29.06.43.09.8.19,1.61.3,2.43.32.1,0,.2.04.3.04.04,0,.09-.02.13-.02.88,0,1.77-.13,2.64-.34.19-.04.37-.1.56-.16.88-.26,1.75-.59,2.57-1.06l25.49-14.71c9.84-5.68,22.06-5.68,31.91,0,9.84,5.68,15.95,16.27,15.95,27.63v29.43c0,.95.15,1.87.37,2.76.05.19.09.37.14.56.25.86.59,1.69,1.03,2.47.07.12.15.22.22.34.43.71.94,1.37,1.51,1.97.1.1.18.21.28.31.65.63,1.37,1.18,2.15,1.66.07.04.13.11.2.16l50.97,29.43c1.83,1.05,3.86,1.58,5.9,1.58s4.08-.53,5.9-1.58l50.97-29.43c3.65-2.11,5.9-6.01,5.9-10.22v-58.86c0-4.22-2.25-8.11-5.9-10.22Z"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11.2 12 4l8 7.2V19a1.5 1.5 0 0 1-1.5 1.5H15v-5.5H9v5.5H5.5A1.5 1.5 0 0 1 4 19v-7.8Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-external" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4.5A1.5 1.5 0 0 1 16.5 20h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</svg>
+
+<a class="skip-link" href="#content">Skip to content</a>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <button class="icon-btn nav-toggle" type="button" aria-label="Open navigation" aria-controls="sidebar" aria-expanded="false"><svg class="i" aria-hidden="true"><use href="#i-menu"></use></svg></button>
+    <a class="brand" href="../..">
+      <span class="brand-name mpb-title" id="mpb-title">MAS-PromptBeach-Pro</span><span class="brand-docs">Docs</span>
+    </a>
+    <button class="search-trigger" type="button" aria-label="Search the docs" aria-haspopup="dialog">
+      <svg class="i" aria-hidden="true"><use href="#i-search"></use></svg><span class="search-placeholder">Search the docs</span><kbd>/</kbd>
+    </button>
+    <a class="deepwiki-btn project-btn" href="https://juyangbai.github.io/MAS-PromptBench/" title="Upstream project page"><svg class="i" aria-hidden="true"><use href="#i-home"></use></svg><span>Upstream Project</span></a>
+    <a class="deepwiki-btn" href="https://deepwiki.com/juyangbai/MAS-PromptBench" title="Ask about the upstream project on DeepWiki"><svg class="i" aria-hidden="true"><use href="#i-wiki"></use></svg><span>DeepWiki</span></a>
+    <a class="deepwiki-btn code-btn github-btn" href="https://github.com/Lyric-zephyr/MAS-PromptBeach-Pro" title="View source on GitHub"><svg class="i" aria-hidden="true"><use href="#i-github"></use></svg><span>Source</span></a>
+    <button class="icon-btn theme-toggle" type="button" aria-label="Switch color theme"><svg class="i" aria-hidden="true"><use href="#i-sun"></use></svg><svg class="i" aria-hidden="true"><use href="#i-moon"></use></svg></button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Documentation">
+    <div class="sidebar-head">
+      <span class="nav-label">Navigation</span>
+      <button class="icon-btn nav-close" type="button" aria-label="Close navigation"><svg class="i" aria-hidden="true"><use href="#i-close"></use></svg></button>
+    </div>
+    <nav class="sidebar-nav">
+      <ul class="nav-list nav-l0">
+  <li><a class="nav-link" href="../..">Home</a></li>
+  <li class="nav-section">
+    <span class="nav-label">Getting Started</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../../getting-started/overview/">Overview</a></li>
+  <li><a class="nav-link" href="../../getting-started/installation/">Installation</a></li>
+  <li><a class="nav-link" href="../../getting-started/connect-a-model/">Connect a Model</a></li>
+  <li><a class="nav-link" href="../../getting-started/quick-start/">Quick Start</a></li>
+</ul>
+  </li>
+  <li class="nav-section">
+    <span class="nav-label">Tasks</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../../tasks/">All Tasks</a></li>
+  <li class="nav-section">
+    <details>
+      <summary>Reasoning<svg class="i" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+      <ul class="nav-list nav-l2">
+  <li><a class="nav-link" href="../../tasks/gpqa/">GPQA-Diamond</a></li>
+  <li><a class="nav-link" href="../../tasks/hotpotqa/">HotpotQA</a></li>
+  <li><a class="nav-link" href="../../tasks/math/">MATH</a></li>
+</ul>
+    </details>
+  </li>
+  <li class="nav-section">
+    <details>
+      <summary>Coding<svg class="i" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+      <ul class="nav-list nav-l2">
+  <li><a class="nav-link" href="../../tasks/livecodebench/">LiveCodeBench</a></li>
+  <li><a class="nav-link" href="../../tasks/apps/">APPS</a></li>
+  <li><a class="nav-link" href="../../tasks/swe-bench/">SWE-Bench Verified</a></li>
+</ul>
+    </details>
+  </li>
+  <li class="nav-section">
+    <details>
+      <summary>Tool-Calling<svg class="i" aria-hidden="true"><use href="#i-chevron"></use></svg></summary>
+      <ul class="nav-list nav-l2">
+  <li><a class="nav-link" href="../../tasks/bfcl/">BFCL</a></li>
+  <li><a class="nav-link" href="../../tasks/toolhop/">ToolHop</a></li>
+  <li><a class="nav-link" href="../../tasks/api-bank/">API-Bank</a></li>
+</ul>
+    </details>
+  </li>
+</ul>
+  </li>
+  <li class="nav-section">
+    <span class="nav-label">Multi-Agent Systems</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../../mas/topologies/">Workflow Topologies</a></li>
+  <li><a class="nav-link" href="../../mas/single/">Single</a></li>
+  <li><a class="nav-link" href="../../mas/independent/">Independent</a></li>
+  <li><a class="nav-link" href="../../mas/sequential/">Sequential</a></li>
+  <li><a class="nav-link" href="../../mas/centralized/">Centralized</a></li>
+  <li><a class="nav-link" href="../../mas/decentralized/">Decentralized</a></li>
+  <li><a class="nav-link" href="../../mas/communication-protocols/">Communication Protocols</a></li>
+  <li><a class="nav-link" href="../../mas/team-sizes/">Team Sizes</a></li>
+</ul>
+  </li>
+  <li class="nav-section">
+    <span class="nav-label">Optimizers</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../../optimizers/">Overview</a></li>
+  <li><a class="nav-link" href="../../optimizers/running/">Run an Optimizer</a></li>
+</ul>
+  </li>
+  <li class="nav-section">
+    <span class="nav-label">Evaluation</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../../evaluation/protocol/">Evaluation Protocol</a></li>
+  <li><a class="nav-link" href="../../evaluation/outputs/">Read Run Outputs</a></li>
+</ul>
+  </li>
+  <li class="nav-section">
+    <span class="nav-label">Extending</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../../extending/add-dataset/">Add a Dataset</a></li>
+  <li><a class="nav-link" href="../../extending/add-topology/">Add a Topology</a></li>
+  <li><a class="nav-link" href="../../extending/add-optimizer/">Add an Optimizer</a></li>
+</ul>
+  </li>
+  <li class="nav-section is-active">
+    <span class="nav-label">Reference</span>
+    <ul class="nav-list nav-l1">
+  <li><a class="nav-link" href="../cli/">Command-Line Flags</a></li>
+  <li><a class="nav-link is-active" href="./" aria-current="page">Environment Variables</a></li>
+  <li><a class="nav-link" href="../repository/">Repository Map</a></li>
+</ul>
+  </li>
+</ul>
+    </nav>
+  </aside>
+  <div class="scrim" hidden></div>
+
+  <main class="content" id="content">
+    <p class="crumbs"><span>Reference</span>
+    </p>
+    <article class="prose">
+      <h1 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Link to this section">#</a></h1>
+<p class="lede">Every environment variable the benchmark reads, grouped by area, with its default in the code. Defaults are the code's unless a script sets its own; variables read only inside the agent frameworks are left out.</p>
+<p>Most runs need only <code>VLLM_BASE_URL</code> and <code>MODEL_ID</code> for the runners, or <code>TASK_ENDPOINTS</code> and <code>REFLECTION_MODEL_BASE_URL</code> for the optimizers. Command-line options are on <a href="../cli/">Command-Line Flags</a>.</p>
+<h2 id="logging">Logging<a class="headerlink" href="#logging" title="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable / option</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>LOG_LEVEL</code></td>
+<td><code>INFO</code></td>
+<td>Console level of the repository's loggers, for every command line (<code>core/logs.py</code>).</td>
+</tr>
+<tr>
+<td><code>--log-level</code></td>
+<td><code>$LOG_LEVEL</code></td>
+<td>Overrides it for <code>optimizers.protocol.run</code> and <code>optimizers.protocol.aggregate</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Progress goes to stderr. Stdout carries only results: reports, JSON summaries, demos and the aggregate table.</p>
+<h2 id="task-model-and-decoding">Task model and decoding<a class="headerlink" href="#task-model-and-decoding" title="Link to this section">#</a></h2>
+<p>The runners read these through <code>core/settings.py</code> at call time, so a change applies to the next client a runner builds.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>VLLM_BASE_URL</code></td>
+<td><code>http://localhost:8000/v1</code></td>
+<td>OpenAI-compatible endpoint of every agent.</td>
+</tr>
+<tr>
+<td><code>MODEL_ID</code></td>
+<td><code>Qwen/Qwen3.5-9B</code></td>
+<td>Served model name sent with each request.</td>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code></td>
+<td><code>EMPTY</code></td>
+<td>API key; a local vLLM server accepts any value.</td>
+</tr>
+<tr>
+<td><code>TASK_MODEL_TEMPERATURE</code></td>
+<td><code>0.0</code></td>
+<td>Sampling temperature.</td>
+</tr>
+<tr>
+<td><code>TASK_MODEL_TOP_P</code></td>
+<td><code>0.9</code></td>
+<td>Nucleus mass.</td>
+</tr>
+<tr>
+<td><code>TASK_MODEL_MAX_TOKENS</code></td>
+<td><code>32768</code></td>
+<td>Output-token cap per model call.</td>
+</tr>
+<tr>
+<td><code>REQUEST_SEED</code></td>
+<td><code>0</code></td>
+<td>Per-request sampling seed.</td>
+</tr>
+</tbody>
+</table>
+<p>Fixed in code: the vLLM <code>extra_body</code> with <code>repetition_penalty</code> 1.05 and <code>chat_template_kwargs.enable_thinking</code> false. The <a href="#sweep-launchers">sweep launchers</a> and the <a href="#run-protocol">run protocol</a> set some of these variables themselves.</p>
+<h2 id="team-shape">Team shape<a class="headerlink" href="#team-shape" title="Link to this section">#</a></h2>
+<p>For runners and adapters without a team spec (<code>configs/teams/&lt;dataset&gt;.yaml</code>) or a team size from the protocol:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Read by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>INDEPENDENT_N_AGENTS</code></td>
+<td><code>4</code></td>
+<td>API-Bank and ToolHop runners; bridge adapters when no team size is passed</td>
+</tr>
+<tr>
+<td><code>DECENTRALIZED_N_AGENTS</code></td>
+<td><code>4</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td><code>DECENTRALIZED_N_ROUNDS</code></td>
+<td><code>2</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td><code>TOOLHOP_&lt;VAR&gt;</code>, <code>APIBANK_&lt;VAR&gt;</code></td>
+<td>the unprefixed value</td>
+<td>ToolHop and API-Bank, before the three above</td>
+</tr>
+<tr>
+<td><code>N_AGENTS</code>, <code>N_ROUNDS</code></td>
+<td><code>4</code>, <code>2</code></td>
+<td>bridge communication and team-size adapters, after the above</td>
+</tr>
+</tbody>
+</table>
+<h2 id="dataset-settings">Dataset settings<a class="headerlink" href="#dataset-settings" title="Link to this section">#</a></h2>
+<p>Read by <code>core/tasks/&lt;dataset&gt;.py</code> unless noted.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TOOLHOP_ALLOW_DATASET_EXEC</code></td>
+<td>unset</td>
+<td>Must be <code>1</code> to execute the dataset-provided tool source. The sweep launchers and the run protocol set it.</td>
+</tr>
+<tr>
+<td><code>TOOLHOP_MAX_TURNS</code></td>
+<td><code>9</code></td>
+<td>Tool-loop turns per agent.</td>
+</tr>
+<tr>
+<td><code>TOOLHOP_TOOL_RESULT_CHAR_BUDGET</code></td>
+<td><code>6000</code></td>
+<td>Characters of a tool result kept in the conversation.</td>
+</tr>
+<tr>
+<td><code>APIBANK_LEVEL</code></td>
+<td><code>all</code></td>
+<td>Level slice; <code>--level</code> overrides it.</td>
+</tr>
+<tr>
+<td><code>APIBANK_ROOT</code></td>
+<td><code>benchmarks/apibank/apibank_upstream/api-bank</code></td>
+<td>API-Bank source checkout.</td>
+</tr>
+<tr>
+<td><code>APIBANK_CURATED_PATH</code></td>
+<td><code>benchmarks/apibank/apibank_eval_ids.json</code> (levels 1 to 3: per-level manifests)</td>
+<td>Curated manifest; <code>--curated-path</code> sets it, and the bridge reads it too.</td>
+</tr>
+<tr>
+<td><code>APIBANK_CURATED_LIMIT</code></td>
+<td>unset</td>
+<td>Cap when a manifest has to be rebuilt.</td>
+</tr>
+<tr>
+<td><code>APIBANK_LEVEL3_JSON</code></td>
+<td>upstream <code>level-3.json</code></td>
+<td>Level-3 data file.</td>
+</tr>
+<tr>
+<td><code>APIBANK_TOOLSEARCHER_SCORER</code></td>
+<td><code>official</code> (level 1: <code>keyword</code>)</td>
+<td>ToolSearcher scorer; <code>--toolsearcher-scorer</code> sets it.</td>
+</tr>
+<tr>
+<td><code>APIBANK_TOOLSEARCHER_MODEL</code></td>
+<td><code>sentence-transformers/paraphrase-MiniLM-L3-v2</code></td>
+<td>ToolSearcher embedding model.</td>
+</tr>
+<tr>
+<td><code>APIBANK_TOOLSEARCHER_DEVICE</code></td>
+<td><code>cpu</code></td>
+<td>Its device.</td>
+</tr>
+<tr>
+<td><code>APIBANK_TOOLSEARCHER_{SKLEARN,GOOGLETRANS,NLTK,BM25}_SHIM</code></td>
+<td><code>1</code></td>
+<td><code>0</code> disables the stub of that optional upstream dependency.</td>
+</tr>
+<tr>
+<td><code>APIBANK_REQUEST_TIMEOUT</code></td>
+<td><code>60</code></td>
+<td>Seconds per model request.</td>
+</tr>
+<tr>
+<td><code>APIBANK_OPENAI_MAX_RETRIES</code></td>
+<td><code>0</code></td>
+<td>Client retries.</td>
+</tr>
+<tr>
+<td><code>SWE_SIF_DIR</code></td>
+<td><code>~/containers/swe</code></td>
+<td>Per-instance Singularity images, pulled on first use.</td>
+</tr>
+<tr>
+<td><code>SWE_SHELL_SANDBOX</code></td>
+<td><code>1</code></td>
+<td><code>0</code> runs the agents' shell commands on the host, for debugging only (<code>core/swe_sandbox.py</code>).</td>
+</tr>
+<tr>
+<td><code>SWE_EVAL_LOG_DIR</code></td>
+<td><code>&lt;out-dir&gt;/eval_logs</code></td>
+<td>Pytest logs of the image evaluation (<code>eval_&lt;instance id&gt;.log</code>).</td>
+</tr>
+<tr>
+<td><code>SWE_REPO_DIR</code></td>
+<td><code>.</code></td>
+<td>Repository of the tools when no checkout is bound.</td>
+</tr>
+<tr>
+<td><code>SWE_PROBLEM_CHAR_BUDGET</code>, <code>SWE_HINTS_CHAR_BUDGET</code></td>
+<td><code>16000</code>, <code>4000</code></td>
+<td>Issue and hints characters in the brief.</td>
+</tr>
+<tr>
+<td><code>SWE_WORKDIR_ROOT</code></td>
+<td><code>~/swe_work_independent</code> (team sizes: <code>..._r&lt;r&gt;</code>)</td>
+<td>Clone root of the replicas (<code>topologies/independent/swe</code>).</td>
+</tr>
+<tr>
+<td><code>LCB_FUNCTIONAL_MEMORY_BYTES</code>, <code>APPS_CALL_BASED_MEMORY_BYTES</code></td>
+<td>4 GiB</td>
+<td>Memory cap of a guarded test call; <code>0</code> means none.</td>
+</tr>
+<tr>
+<td><code>{LCB,APPS,HOTPOTQA}_INDEPENDENT_RECURSION_LIMIT</code></td>
+<td>team spec</td>
+<td>Independent runners: LangGraph recursion limit per replica.</td>
+</tr>
+<tr>
+<td><code>{LCB,APPS}_TOOL_TIMEOUT_S</code>, <code>{LCB,APPS}_TOOL_OUTPUT_CHAR_BUDGET</code></td>
+<td><code>10</code>, <code>4000</code></td>
+<td>Independent runners: <code>python_exec</code> timeout and output budget.</td>
+</tr>
+<tr>
+<td><code>APPS_TEST_TIMEOUT_S</code></td>
+<td><code>4</code></td>
+<td>Independent APPS runner: per-test timeout.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="openai-agents-sdk">OpenAI Agents SDK<a class="headerlink" href="#openai-agents-sdk" title="Link to this section">#</a></h3>
+<p><code>OPENAI_AGENTS_PATH</code> (default <code>vendor/openai_agents</code>) is the isolated install of <code>openai-agents</code>, which needs <code>openai&gt;=3</code>:</p>
+<div class="language-bash highlight"><span class="filename">Install the SDK</span><pre><span></span><code>pip<span class="w"> </span>install<span class="w"> </span>--target<span class="w"> </span>vendor/openai_agents<span class="w"> </span>-r<span class="w"> </span>requirements-openai-agents.txt
+</code></pre></div>
+<p>It must be first on <code>PYTHONPATH</code> for the whole process. The <code>decentralized/openai_agents</code> runners and <code>optimizers.protocol.run</code> restart themselves with it prepended when it is not. Without a usable SDK the runners exit with status 1 before the first row, and a protocol job with status 2.</p>
+<h3 id="wall-clock-caps">Wall-clock caps<a class="headerlink" href="#wall-clock-caps" title="Link to this section">#</a></h3>
+<p>A row that hits its cap is recorded with its error. Team-size and communication variants run the same code.</p>
+<table>
+<thead>
+<tr>
+<th>Runners</th>
+<th>Cap</th>
+<th>Set by</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>independent/{lcb,apps}</code></td>
+<td>180 s</td>
+<td><code>LCB_INDEPENDENT_ROW_TIMEOUT_S</code>, <code>APPS_INDEPENDENT_ROW_TIMEOUT_S</code></td>
+<td><code>asyncio.wait_for</code></td>
+</tr>
+<tr>
+<td><code>independent/hotpotqa</code></td>
+<td>120 s</td>
+<td><code>HOTPOTQA_INDEPENDENT_ROW_TIMEOUT_S</code></td>
+<td><code>asyncio.wait_for</code></td>
+</tr>
+<tr>
+<td><code>independent/{math,gpqa}</code></td>
+<td>120 s</td>
+<td>hardcoded <code>PER_ROW_TIMEOUT_S</code></td>
+<td><code>asyncio.wait_for</code></td>
+</tr>
+<tr>
+<td><code>centralized/autogen/{hotpotqa,gpqa,math}</code></td>
+<td>120 s</td>
+<td>hardcoded <code>PER_ROW_TIMEOUT_S</code></td>
+<td><code>asyncio.wait_for</code></td>
+</tr>
+<tr>
+<td><code>decentralized/langgraph/{gpqa,math}</code></td>
+<td>120 s</td>
+<td>hardcoded <code>PER_ROW_TIMEOUT_S</code></td>
+<td>SIGALRM (<code>row_timeout</code> in <code>core/runtime.py</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>The SIGALRM cap rarely ends a row: the alarm usually fires during a model request, which the OpenAI client catches and retries, so it only stops a row between requests. It stays unchanged so existing results remain reproducible.</p>
+<h2 id="run-protocol">Run protocol<a class="headerlink" href="#run-protocol" title="Link to this section">#</a></h2>
+<p>Read by <code>optimizers.protocol.run</code> (<code>optimizers/protocol/settings.py</code>) when the job needs the value. The command-line options are under <a href="../cli/#run-protocol">Run protocol</a>.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TASK_ENDPOINTS</code></td>
+<td>unset</td>
+<td>Comma-separated task endpoints (<code>--task-endpoints</code> sets it); fallback <code>VLLM_BASE_URL</code>.</td>
+</tr>
+<tr>
+<td><code>MODEL_ID</code>, <code>TASK_MODEL</code></td>
+<td>from <code>--model</code></td>
+<td>Task model.</td>
+</tr>
+<tr>
+<td><code>REFLECTION_MODEL_ID</code></td>
+<td><code>Qwen/Qwen3.5-122B-A10B-FP8</code></td>
+<td>Reflection model; any other value makes the job non-conformant.</td>
+</tr>
+<tr>
+<td><code>REFLECTION_MODEL_BASE_URL</code></td>
+<td><code>http://localhost:8200/v1</code></td>
+<td>Reflection endpoint.</td>
+</tr>
+<tr>
+<td><code>OPENAI_API_KEY</code></td>
+<td><code>EMPTY</code></td>
+<td>Key of both endpoints.</td>
+</tr>
+<tr>
+<td><code>REFLECTION_CONTEXT_LIMIT</code></td>
+<td>served <code>max_model_len</code>, else 65,536</td>
+<td>Reflection window used by context fitting.</td>
+</tr>
+<tr>
+<td><code>TOKENIZER_CACHE_DIRS</code></td>
+<td>unset</td>
+<td>Colon-separated extra tokenizer caches.</td>
+</tr>
+<tr>
+<td><code>DSPY_CACHEDIR</code></td>
+<td><code>&lt;out&gt;/optimization/dspy_cache</code></td>
+<td>The job's DSPy disk cache.</td>
+</tr>
+</tbody>
+</table>
+<p>Per rollout the protocol sets, then restores, <code>MODEL_ID</code>, <code>REQUEST_SEED</code>, <code>TASK_MODEL_TEMPERATURE</code>, <code>TASK_MODEL_TOP_P</code> and <code>TASK_MODEL_MAX_TOKENS</code> (optimization 0.2 / 0.9 / 32,768; evaluation 0.0 / 0.9 / 32,768), <code>TASK_TEMP_OPTIMIZE</code>, <code>TASK_TEMP_EVAL</code> and, for ToolHop, <code>TOOLHOP_ALLOW_DATASET_EXEC=1</code>.</p>
+<h2 id="optimizer-bridge">Optimizer bridge<a class="headerlink" href="#optimizer-bridge" title="Link to this section">#</a></h2>
+<p>Read by <code>optimizers/bridge</code>; the index is <a href="https://github.com/juyangbai/MAS-PromptBench/blob/main/optimizers/bridge/env.py"><code>env.py</code></a>.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TASK_MODEL</code></td>
+<td><code>Qwen/Qwen3.5-9B</code></td>
+<td>Adapters' task model when <code>MODEL_ID</code> is unset.</td>
+</tr>
+<tr>
+<td><code>REFL_MODEL</code></td>
+<td><code>Qwen/Qwen3.5-122B-A10B-FP8</code></td>
+<td>Reflection-model name (<code>lm.REFL_MODEL</code>); protocol jobs use <code>REFLECTION_MODEL_ID</code>.</td>
+</tr>
+<tr>
+<td><code>TASK_ENDPOINTS</code></td>
+<td><code>http://localhost:8000/v1</code></td>
+<td>Task endpoints, round robin; each runner's <code>VLLM_BASE_URL</code> is repointed to them.</td>
+</tr>
+<tr>
+<td><code>REFLECTION_COMPACT_DATASETS</code></td>
+<td><code>lcb</code></td>
+<td>Datasets whose role traces are compacted for reflection; <code>*</code> means all.</td>
+</tr>
+<tr>
+<td><code>MIPRO_REFLECTION_COMPACT_DATASETS</code></td>
+<td><code>REFLECTION_COMPACT_DATASETS</code></td>
+<td>The same for MIPRO's program view, read first.</td>
+</tr>
+<tr>
+<td><code>TASK_TEMP_OPTIMIZE</code>, <code>TASK_TEMP_EVAL</code></td>
+<td><code>0.2</code>, <code>0</code></td>
+<td>Rollout temperature outside and inside <code>lm.eval_mode</code>, mirrored into <code>TASK_MODEL_TEMPERATURE</code>.</td>
+</tr>
+<tr>
+<td><code>REAL_RUNNER_FAIL_ON_ADAPTER_ERROR</code></td>
+<td><code>1</code></td>
+<td><code>0</code> scores an adapter exception as a failed row instead of raising.</td>
+</tr>
+<tr>
+<td><code>REAL_RUNNER_KEEP_MESSAGES</code></td>
+<td><code>0</code></td>
+<td>Keep full message lists in single and independent BFCL and GPQA outputs.</td>
+</tr>
+<tr>
+<td><code>REAL_RUNNER_RECURSION_LIMIT</code>, <code>BFCL_{SINGLE,INDEPENDENT,CENTRALIZED_GRAPH,CENTRALIZED_WORKER}_RECURSION_LIMIT</code></td>
+<td><code>100</code></td>
+<td>LangGraph limits of the BFCL adapters.</td>
+</tr>
+<tr>
+<td><code>GPQA_SINGLE_RECURSION_LIMIT</code>, <code>GPQA_INDEPENDENT_RECURSION_LIMIT</code></td>
+<td><code>25</code>, <code>15</code></td>
+<td>LangGraph limits of the GPQA adapters.</td>
+</tr>
+<tr>
+<td><code>BFCL_CATEGORY</code></td>
+<td>all four with fixed splits, else <code>simple</code></td>
+<td>BFCL subset of <code>load_all()</code>.</td>
+</tr>
+<tr>
+<td><code>SWE_WORK_ROOT</code></td>
+<td><code>~/swe_work</code></td>
+<td>Repository clones of the SWE adapters.</td>
+</tr>
+<tr>
+<td><code>ALLOW_TOY_SWE_WORKDIR</code></td>
+<td><code>0</code></td>
+<td>Offline tests only: a toy repository when no clone exists.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="method-settings">Method settings<a class="headerlink" href="#method-settings" title="Link to this section">#</a></h2>
+<p>Each method's knobs are one frozen dataclass, listed on <a href="../../optimizers/#method-settings">Optimizers</a>. Only MAPRO and TAVO also read environment variables:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MAPRO_LISTWISE</code></td>
+<td><code>0</code></td>
+<td><code>1</code> selects the paper's listwise scoring, which the protocol refuses.</td>
+</tr>
+<tr>
+<td><code>MAPRO_PAPER_ANCHOR</code></td>
+<td><code>0</code></td>
+<td><code>1</code> selects the latest-selection anchor, which the protocol refuses.</td>
+</tr>
+<tr>
+<td><code>MAPRO_INIT_MAX_TOKENS</code></td>
+<td><code>1024</code></td>
+<td>Rewrite cap of the pool initialization.</td>
+</tr>
+<tr>
+<td><code>MAPRO_MUTATE_MAX_TOKENS</code></td>
+<td><code>512</code></td>
+<td>Rewrite cap of a mutation.</td>
+</tr>
+<tr>
+<td><code>TAVO_CREDIT</code></td>
+<td><code>1</code></td>
+<td><code>0</code>, <code>false</code>, <code>no</code> or <code>off</code> turns off trajectory credit (an ablation).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="sweep-launchers">Sweep launchers<a class="headerlink" href="#sweep-launchers" title="Link to this section">#</a></h2>
+<p><code>scripts/run_topologies.sh</code>, <code>run_teamsizes.sh</code> and <code>run_communications.sh</code> run one process per cell. Each exports <code>VLLM_BASE_URL</code> (<code>http://localhost:8000/v1</code>), <code>MODEL_ID</code> (<code>Qwen/Qwen3.5-9B</code>) and <code>TOOLHOP_ALLOW_DATASET_EXEC=1</code> unless they are set, and reads:</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th><code>run_topologies.sh</code></th>
+<th><code>run_teamsizes.sh</code></th>
+<th><code>run_communications.sh</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DATASETS</code></td>
+<td>all 9</td>
+<td>all 9</td>
+<td><code>hotpotqa lcb bfcl toolhop apibank swe</code></td>
+</tr>
+<tr>
+<td><code>TOPOLOGIES</code></td>
+<td>not read (the 8 runner folders in <code>TOPOS</code>)</td>
+<td><code>independent sequential centralized decentralized</code></td>
+<td>same</td>
+</tr>
+<tr>
+<td><code>RVALUES</code></td>
+<td>not read</td>
+<td><code>2 4 8 10</code></td>
+<td>not read</td>
+</tr>
+<tr>
+<td><code>FORMATS</code></td>
+<td>not read</td>
+<td>not read</td>
+<td><code>freeform semi_structured structured_soft</code></td>
+</tr>
+<tr>
+<td><code>OUT_ROOT</code></td>
+<td><code>results/topologies_baseline</code></td>
+<td><code>results/teamsizes</code></td>
+<td>not read (runner defaults)</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>BFCL cells run their evaluation IDs one AST category at a time. SWE-bench cells run their 30 IDs, with <code>--eval singularity</code> in <code>run_topologies.sh</code> and <code>run_teamsizes.sh</code>. Each script sets the other datasets' <code>--limit</code>.</li>
+<li><code>run_topologies.sh</code> puts <code>vendor/openai_agents</code>, when present, first on <code>PYTHONPATH</code> for the Agents SDK cells, so they need no restart.</li>
+</ul>
+<h2 id="model-serving">Model serving<a class="headerlink" href="#model-serving" title="Link to this section">#</a></h2>
+<p><code>models/serve_qwen3_5_9b.sh</code> and <code>serve_llama3_1_8b.sh</code> start one vLLM replica per GPU on consecutive ports; <code>serve_qwen3_5_122b.sh</code> starts one tensor-parallel instance.</p>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>9B</th>
+<th>Llama 8B</th>
+<th>122B</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>MODEL_ID</code></td>
+<td><code>Qwen/Qwen3.5-9B</code></td>
+<td><code>meta-llama/Llama-3.1-8B-Instruct</code></td>
+<td><code>Qwen/Qwen3.5-122B-A10B-FP8</code></td>
+</tr>
+<tr>
+<td>port</td>
+<td><code>VLLM_BASE_PORT</code> (or <code>BASE_PORT</code>) 8000</td>
+<td><code>VLLM_BASE_PORT</code> (or <code>BASE_PORT</code>) 8100</td>
+<td><code>VLLM_PORT</code> 8200</td>
+</tr>
+<tr>
+<td>GPUs</td>
+<td><code>VLLM_GPU_LIST</code> (or <code>GPU_LIST</code>): every visible GPU; <code>NUM_REPLICAS</code>: their count</td>
+<td>same</td>
+<td><code>TENSOR_PARALLEL_SIZE</code> 4 over <code>CUDA_VISIBLE_DEVICES</code> (default the first 4)</td>
+</tr>
+<tr>
+<td><code>MAX_MODEL_LEN</code></td>
+<td>131072</td>
+<td>131072</td>
+<td>262144</td>
+</tr>
+<tr>
+<td><code>GPU_MEMORY_UTIL</code></td>
+<td>0.90</td>
+<td>0.90</td>
+<td>0.95</td>
+</tr>
+<tr>
+<td><code>KV_CACHE_DTYPE</code></td>
+<td><code>auto</code></td>
+<td><code>auto</code></td>
+<td><code>fp8</code></td>
+</tr>
+<tr>
+<td>other</td>
+<td>none</td>
+<td><code>CHAT_TEMPLATE</code> (<code>models/tool_chat_template_llama3.1_json_multi.jinja</code>), <code>MAX_NUM_SEQS</code> 256, <code>MAX_NUM_BATCHED_TOKENS</code> 32768</td>
+<td>none</td>
+</tr>
+</tbody>
+</table>
+<p>All three also read <code>VLLM_HOST</code> (<code>0.0.0.0</code>), <code>CONDA_ENV</code> (<code>mas-promptbench</code>, activated unless it is already <code>CONDA_DEFAULT_ENV</code>), <code>HF_HOME</code> (<code>$HOME/models</code>, also the default of <code>MODEL_PATH</code>, vLLM's <code>--download-dir</code>, and of <code>TRANSFORMERS_CACHE</code>) and <code>LOG_DIR</code> (<code>results/vllm_&lt;model&gt;</code>). They append the conda environment's CUDA driver stubs to <code>LIBRARY_PATH</code> for flashinfer's JIT build.</p>
+<ul>
+<li><code>$HOME/models</code> is a flat download folder, not the <code>~/.cache/huggingface/hub</code> layout. To serve from an existing Hugging Face cache, set <code>HF_HOME</code> to it and <code>MODEL_PATH</code> and <code>TRANSFORMERS_CACHE</code> to <code>&lt;HF_HOME&gt;/hub</code>.</li>
+<li>The Llama model is gated: set <code>HF_TOKEN</code> for the download, or serve a cached copy with <code>HF_HUB_OFFLINE=1</code>.</li>
+</ul>
+<div class="admonition tip">
+<p class="admonition-title">Serve in a clean shell</p>
+<p>The serve scripts and the runners share <code>MODEL_ID</code>. If your shell exports <code>MODEL_ID=Qwen/Qwen3.5-9B</code> for the runners, <code>serve_qwen3_5_122b.sh</code> serves the 9B model. Start it in a clean shell or pass <code>MODEL_ID=Qwen/Qwen3.5-122B-A10B-FP8</code>.</p>
+</div>
+<h2 id="prompt-generation">Prompt generation<a class="headerlink" href="#prompt-generation" title="Link to this section">#</a></h2>
+<p><code>configs/generate_role_prompts.py</code> reads <code>PROMPT_GEN_BASE_URL</code> (<code>http://localhost:8200/v1</code>), <code>PROMPT_GEN_API_KEY</code> (<code>EMPTY</code>) and <code>PROMPT_GEN_MODEL</code> (<code>Qwen/Qwen3.5-122B-A10B-FP8</code>). The options <code>--base-url</code>, <code>--api-key</code> and <code>--model</code> override them; the other options are on <a href="../cli/#prompt-generation">Command-Line Flags</a>.</p>
+<h2 id="tests">Tests<a class="headerlink" href="#tests" title="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GOLDEN_WORKERS</code></td>
+<td>half the CPUs (2 to 32)</td>
+<td>Parallel golden cell workers.</td>
+</tr>
+<tr>
+<td><code>GOLDEN_EXEC_WORKERS</code></td>
+<td><code>6</code></td>
+<td>Concurrent APPS cells.</td>
+</tr>
+<tr>
+<td><code>GOLDEN_CELL_TIMEOUT</code></td>
+<td><code>900</code></td>
+<td>Seconds per cell.</td>
+</tr>
+<tr>
+<td><code>GOLDEN_RERUN_MAX</code></td>
+<td><code>25</code></td>
+<td>Differing cells are re-run, to rule out machine load, only when at most this many differ.</td>
+</tr>
+<tr>
+<td><code>GOLDEN_DIFF_LINES</code></td>
+<td><code>400</code></td>
+<td>Diff lines shown per failing cell.</td>
+</tr>
+<tr>
+<td><code>GOLDEN_REAL_HOME</code></td>
+<td><code>~</code></td>
+<td>Home whose Hugging Face cache the workers read.</td>
+</tr>
+<tr>
+<td><code>HF_HOME</code>, <code>HF_DATASETS_CACHE</code></td>
+<td><code>~/.cache/huggingface</code></td>
+<td>Local Hugging Face cache.</td>
+</tr>
+<tr>
+<td><code>MASPOB_TEST_SITE_PACKAGES</code></td>
+<td>unset</td>
+<td>Extra site-packages with <code>torch_geometric</code> for the MASPOB tests, which skip without it.</td>
+</tr>
+</tbody>
+</table>
+<p>The suite runs offline with <code>HF_DATASETS_OFFLINE=1 HF_HUB_OFFLINE=1 PYTHONDONTWRITEBYTECODE=1 TOOLHOP_ALLOW_DATASET_EXEC=1</code>; see the <a href="https://github.com/juyangbai/MAS-PromptBench/blob/main/tests/golden/README.md">golden tests README</a>.</p>
+    </article>
+    <nav class="pager" aria-label="Previous and next pages">
+      <a class="pager-link prev" href="../cli/"><span><svg class="i" aria-hidden="true"><use href="#i-arrow-left"></use></svg>Previous</span><b>Command-Line Flags</b></a>
+      <a class="pager-link next" href="../repository/"><span>Next<svg class="i" aria-hidden="true"><use href="#i-arrow-right"></use></svg></span><b>Repository Map</b></a>
+    </nav>
+
+    <footer class="site-foot">
+      <span>MAS-PromptBeach-Pro is based on MAS-PromptBench and distributed under the MIT License.</span>
+      <span class="foot-links">
+        <a href="https://juyangbai.github.io/MAS-PromptBench/">Project page</a>
+        <a href="https://github.com/Lyric-zephyr/MAS-PromptBeach-Pro">Code</a>
+        <a href="https://deepwiki.com/juyangbai/MAS-PromptBench">DeepWiki</a>
+      </span>
+    </footer>
+  </main>
+  <aside class="toc" aria-label="On this page">
+    <span class="nav-label">On this page</span>
+    <ul>
+      <li><a href="#logging">Logging</a>
+      </li>
+      <li><a href="#task-model-and-decoding">Task model and decoding</a>
+      </li>
+      <li><a href="#team-shape">Team shape</a>
+      </li>
+      <li><a href="#dataset-settings">Dataset settings</a>
+        <ul><li><a href="#openai-agents-sdk">OpenAI Agents SDK</a></li><li><a href="#wall-clock-caps">Wall-clock caps</a></li>
+        </ul>
+      </li>
+      <li><a href="#run-protocol">Run protocol</a>
+      </li>
+      <li><a href="#optimizer-bridge">Optimizer bridge</a>
+      </li>
+      <li><a href="#method-settings">Method settings</a>
+      </li>
+      <li><a href="#sweep-launchers">Sweep launchers</a>
+      </li>
+      <li><a href="#model-serving">Model serving</a>
+      </li>
+      <li><a href="#prompt-generation">Prompt generation</a>
+      </li>
+      <li><a href="#tests">Tests</a>
+      </li>
+    </ul>
+  </aside>
+</div>
+
+<div class="search-dialog" role="dialog" aria-modal="true" aria-label="Search the docs" hidden>
+  <div class="search-panel">
+    <div class="search-field">
+      <svg class="i" aria-hidden="true"><use href="#i-search"></use></svg>
+      <input id="search-input" type="search" placeholder="Search tasks, topologies, flags…" autocomplete="off" spellcheck="false" aria-controls="search-results">
+      <kbd>Esc</kbd>
+    </div>
+    <ul class="search-results" id="search-results" role="listbox"></ul>
+    <p class="search-hint">Type at least two characters. <kbd>↑</kbd><kbd>↓</kbd> to move, <kbd>Enter</kbd> to open.</p>
+  </div>
+</div>
+
+<script>
+  window.MathJax = {
+    tex: { inlineMath: [["\\(", "\\)"]], displayMath: [["\\[", "\\]"]], processEscapes: true, processEnvironments: true },
+    options: { ignoreHtmlClass: ".*|", processHtmlClass: "arithmatex" },
+    svg: { fontCache: "global" }
+  };
+</script>
+<script src="../../assets/docs.js?v=20261123043733" defer></script>
+</div>
+</body>
+</html>
