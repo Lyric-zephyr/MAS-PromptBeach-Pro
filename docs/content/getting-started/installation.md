@@ -12,7 +12,10 @@ Create one conda environment for the benchmark, then install the OpenAI Agents S
 
 ## Clone the repository
 
-On the MAS-PromptBeach-Pro repository page, use GitHub's **Code** button to copy the clone URL. Run `git clone` with that URL, then enter the cloned directory.
+```bash title="Clone"
+git clone https://github.com/Lyric-zephyr/MyMasBeach.git
+cd MyMasBeach
+```
 
 The agent frameworks come with the environment in the next step; nothing else needs cloning.
 
@@ -26,14 +29,14 @@ conda activate mas-promptbench
 The environment holds:
 
 - **Python 3.11** with NumPy and pandas.
-- **The agent frameworks**: LangGraph, CrewAI and AutoGen, each installed from the upstream commit pinned in [`environment.yml`](https://github.com/juyangbai/MAS-PromptBench/blob/main/environment.yml), plus LangChain's OpenAI client and the OpenAI SDK (`openai<3`).
+- **The agent frameworks**: LangGraph, CrewAI and AutoGen, each installed from the upstream commit pinned in [`environment.yml`](https://github.com/Lyric-zephyr/MyMasBeach/blob/main/environment.yml), plus LangChain's OpenAI client and the OpenAI SDK (`openai<3`).
 - **Benchmark tooling**: Hugging Face `datasets` for loading tasks, the `wikipedia` client used by HotpotQA retrieval, the official BFCL AST checker (`bfcl-eval`) and the SWE-bench harness (`swebench`).
 - **Prompt optimization**: DSPy and `gepa`, plus `torch`, `torch_geometric` and `sentence-transformers` (CPU is enough).
 - **Local serving**: vLLM and a CUDA 12.8 toolchain, used only if you serve models yourself.
 
 ## Install the OpenAI Agents SDK
 
-The Decentralized topology has a variant on the OpenAI Agents SDK. The SDK needs `openai>=3`, which conflicts with the main environment, so install it into its own folder from the pinned list in [`requirements-openai-agents.txt`](https://github.com/juyangbai/MAS-PromptBench/blob/main/requirements-openai-agents.txt):
+The Decentralized topology has a variant on the OpenAI Agents SDK. The SDK needs `openai>=3`, which conflicts with the main environment, so install it into its own folder from the pinned list in [`requirements-openai-agents.txt`](https://github.com/Lyric-zephyr/MyMasBeach/blob/main/requirements-openai-agents.txt):
 
 ```bash title="Isolated SDK install"
 pip install --target vendor/openai_agents -r requirements-openai-agents.txt

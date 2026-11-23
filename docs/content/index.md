@@ -8,9 +8,9 @@ hide:
 
 <span class="eyebrow">Tutorial and reference</span>
 
-# MAS-PromptBeach-Pro Docs { .brand-title .mpb-hero }
+# MyMasBeach Docs { .brand-title .mpb-hero }
 
-MAS-PromptBeach-Pro builds on MAS-PromptBench with resumable runs, reusable model settings, and evaluation fixes. These docs describe how to run the benchmark and its eight prompt optimizers. [Original project](https://github.com/juyangbai/MAS-PromptBench)
+MyMasBeach builds on MAS-PromptBench with resumable runs, reusable model settings, and evaluation fixes. These docs describe how to run the benchmark and its eight prompt optimizers. [Original project](https://github.com/juyangbai/MAS-PromptBench)
 { .hero-lede }
 
 <div class="hero-actions" markdown>

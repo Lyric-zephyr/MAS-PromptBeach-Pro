@@ -1,9 +1,9 @@
-site_name: MAS-PromptBeach-Pro
-site_description: Documentation for MAS-PromptBeach-Pro, a derivative of the MAS-PromptBench benchmark.
+site_name: MyMasBeach
+site_description: Documentation for MyMasBeach, a derivative of the MAS-PromptBench benchmark.
 site_url: !ENV MPB_DOCS_URL
 docs_dir: content
 site_dir: site
-copyright: MAS-PromptBeach-Pro is based on MAS-PromptBench and distributed under the MIT License.
+copyright: MyMasBeach is based on MAS-PromptBench and distributed under the MIT License.
 
 theme:
   name: null
@@ -15,7 +15,7 @@ theme:
 
 extra:
   project_page: !ENV [MPB_PROJECT_PAGE, "https://juyangbai.github.io/MAS-PromptBench/"]
-  code_url: !ENV [MPB_CODE_URL, "https://github.com/juyangbai/MAS-PromptBench"]
+  code_url: !ENV [MPB_CODE_URL, "https://github.com/Lyric-zephyr/MyMasBeach"]
   deepwiki: https://deepwiki.com/juyangbai/MAS-PromptBench
 
 plugins:

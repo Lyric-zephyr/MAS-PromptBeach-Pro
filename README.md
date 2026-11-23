@@ -1,4 +1,4 @@
-# MAS-PromptBeach-Pro
+# MyMasBeach
 
 A version of MAS-PromptBench with resumable benchmark runs, reusable model settings, and fixes for dataset loading and scoring.
 
@@ -9,7 +9,7 @@ This project is based on the original benchmark by Juyang Bai and Laixi Shi. See
 <details open>
 <summary><b>Contents</b></summary>
 
-1. [Changes in MAS-PromptBeach-Pro](#changes-in-mas-promptbeach-pro)
+1. [Changes in MyMasBeach](#changes-in-mymasbeach)
 2. [News and Updates](#-news-and-updates)
 3. [Introduction](#-introduction)
 4. [Code Structure](#-code-structure)
@@ -22,7 +22,7 @@ This project is based on the original benchmark by Juyang Bai and Laixi Shi. See
 
 ---
 
-## Changes in MAS-PromptBeach-Pro
+## Changes in MyMasBeach
 
 The main changes are in the centralized LangGraph runners and the shared API-Bank and ToolHop paths. Other runners can reuse the shared settings and dataset loaders.
 
@@ -104,9 +104,10 @@ Go from a fresh clone to scored results in four steps — install, serve a model
 
 ### 1. Install
 
-Clone this repository using GitHub's **Code** button, then run the commands below from the cloned directory.
-
 ```bash
+git clone https://github.com/Lyric-zephyr/MyMasBeach.git
+cd MyMasBeach
+
 conda env create -f environment.yml      # Python 3.11 + vLLM + benchmark and optimizer deps
 conda activate mas-promptbench
 pip install --target vendor/openai_agents -r requirements-openai-agents.txt   # OpenAI Agents SDK (needs openai>=3, kept isolated)
@@ -203,7 +204,7 @@ MAS-PromptBench builds on the agent frameworks and libraries below, which retain
 
 ## 📚 Citation
 
-If you use MAS-PromptBeach-Pro in your research, please cite the original MAS-PromptBench paper:
+If you use MyMasBeach in your research, please cite the original MAS-PromptBench paper:
 
 ```bibtex
 @article{bai2026mas,

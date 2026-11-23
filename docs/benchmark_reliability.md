@@ -1,6 +1,6 @@
-# MAS-PromptBeach-Pro 评测改进与使用方法
+# MyMasBeach 评测改进与使用方法
 
-MAS-PromptBeach-Pro 基于 Juyang Bai 和 Laixi Shi 的 [MAS-PromptBench](https://github.com/juyangbai/MAS-PromptBench)。[项目 README](../README.md#changes-in-mas-promptbeach-pro) 列出了新增文件及其用途。
+MyMasBeach 基于 Juyang Bai 和 Laixi Shi 的 [MAS-PromptBench](https://github.com/juyangbai/MAS-PromptBench)。[项目 README](../README.md#changes-in-mymasbeach) 列出了新增文件及其用途。
 
 本次把此前 WSL 终端中的临时修补移进了项目。任务流程改造以本轮使用的中央式 LangGraph 入口以及 API-Bank、ToolHop 公共路径为主；其他框架也会复用公共配置和数据加载，但并未逐一运行完整评测。主要入口仍是 `python -m ...`，无需再粘贴覆盖函数的长脚本。没有更改模型生成的答案、代码或补丁来提高分数。
 

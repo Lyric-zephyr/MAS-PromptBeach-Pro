@@ -1,4 +1,4 @@
-# MAS-PromptBeach-Pro documentation
+# MyMasBeach documentation
 
 Everything for the documentation site lives in this folder:
 
